@@ -1,78 +1,255 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { useState, useEffect } from "react";
+import Navbar from "../components/Navbar";
+import Hero from "../components/Hero";
+import CombinedBar from "../components/CombinedBar";
+import Footer from "../components/Footer";
+import RoomCard from "../components/RoomCard";
+import { roomsAPI } from "../services/api";
+import toast from "react-hot-toast";
 
 export default function Home() {
+  const [featuredRooms, setFeaturedRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [popularAreas] = useState([
+    { name: "Hinjewadi", count: 156, color: "from-blue-500 to-cyan-500" },
+    { name: "Kharadi", count: 89, color: "from-purple-500 to-pink-500" },
+    { name: "Baner", count: 134, color: "from-green-500 to-emerald-500" },
+    { name: "Wakad", count: 76, color: "from-orange-500 to-red-500" },
+    { name: "Viman Nagar", count: 98, color: "from-indigo-500 to-blue-500" },
+    { name: "Kothrud", count: 67, color: "from-yellow-500 to-orange-500" },
+  ]);
+
+  const features = [
+    {
+      icon: "🔐",
+      title: "Verified Listings",
+      description: "Every room is personally verified for authenticity"
+    },
+    {
+      icon: "📸",
+      title: "Real Photos",
+      description: "No stock images, only actual room photos"
+    },
+    {
+      icon: "💰",
+      title: "No Brokerage",
+      description: "Direct owner contact, zero brokerage fees"
+    },
+    {
+      icon: "⚡",
+      title: "Instant Contact",
+      description: "Connect with owners via WhatsApp instantly"
+    }
+  ];
+
+  useEffect(() => {
+    const fetchFeaturedRooms = async () => {
+      try {
+        const data = await roomsAPI.getFeaturedRooms();
+        
+        // Handle different response structures
+        let roomsArray = [];
+        
+        if (Array.isArray(data)) {
+          roomsArray = data;
+        } else if (data?.content && Array.isArray(data.content)) {
+          roomsArray = data.content;
+        } else if (data?.data && Array.isArray(data.data)) {
+          roomsArray = data.data;
+        } else {
+          console.warn('Unexpected API response structure:', data);
+          roomsArray = [];
+        }
+        
+        setFeaturedRooms(roomsArray.slice(0, 6));
+      } catch (error) {
+        console.error('Error fetching featured rooms:', error);
+        toast.error('Failed to load featured rooms');
+        setFeaturedRooms([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedRooms();
+  }, []);
+
+  const handleSearch = (filters) => {
+    const params = new URLSearchParams();
+    
+    if (filters.area) params.append("area", filters.area);
+    if (filters.maxRent) params.append("maxRent", filters.maxRent);
+    if (filters.type) params.append("type", filters.type);
+    if (filters.gender) params.append("gender", filters.gender);
+    
+    window.location.href = `/rooms?${params.toString()}`;
+  };
+
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black`}
-    >
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the index.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-white">
+      <Navbar />
+      
+      {/* Hero Section */}
+      <Hero />
+      
+      {/* Search Section */}
+      <div className="relative -mt-16 z-40 px-4">
+        <div className="max-w-6xl mx-auto">
+          <CombinedBar onSearch={handleSearch} />
+        </div>
+      </div>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-20">
+        {/* Features Section */}
+        <section className="mb-20">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">
+              Why Choose Roomsafar?
+            </h2>
+            <p className="text-lg text-slate-600 max-w-3xl mx-auto">
+              We&apos;re changing the way people find rooms in Pune with transparency and trust
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <div 
+                key={index}
+                className="group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300"
+              >
+                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-slate-600">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Popular Areas */}
+        <section className="mb-20">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-3xl font-bold text-slate-900">
+                Popular Areas in Pune
+              </h2>
+              <p className="text-slate-600 mt-2">
+                Explore rooms in Pune&apos;s most sought-after localities
+              </p>
+            </div>
+            <a 
+              href="/areas" 
+              className="text-blue-600 font-medium hover:text-blue-700 flex items-center gap-2"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              View all areas
+              <span>→</span>
+            </a>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {popularAreas.map((area) => (
+              <a
+                key={area.name}
+                href={`/rooms?area=${encodeURIComponent(area.name)}`}
+                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br via-transparent p-6 transition-all duration-300 hover:scale-105"
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${area.color} opacity-10 group-hover:opacity-20 transition-opacity`} />
+                <div className="relative z-10">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-1">
+                    {area.name}
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    {area.count}+ listings
+                  </p>
+                  <div className="mt-4 text-blue-600 font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Explore
+                    <span className="transform group-hover:translate-x-1 transition-transform">→</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        {/* Featured Rooms */}
+        <section className="mb-20">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-3xl font-bold text-slate-900">
+                Featured Rooms
+              </h2>
+              <p className="text-slate-600 mt-2">
+                Handpicked rooms with great reviews and amenities
+              </p>
+            </div>
+            <a 
+              href="/rooms" 
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:shadow-lg transition"
             >
-              Learning
-            </a>{" "}
-            center.
+              View All Rooms
+            </a>
+          </div>
+          
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="bg-slate-200 rounded-2xl h-56 mb-4"></div>
+                  <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          ) : featuredRooms.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredRooms.map((room) => (
+                <RoomCard key={room.id} room={room} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
+              <div className="text-6xl mb-4">🏠</div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                No featured rooms available
+              </h3>
+              <p className="text-slate-600 mb-6">
+                Check back soon for new listings
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* CTA Section */}
+        <section className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-8 md:p-12 text-center text-white">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Ready to Find Your Perfect Room?
+          </h2>
+          <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
+            Join thousands of students and professionals who found their ideal stay through Roomsafar
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs/pages/getting-started?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href="/rooms"
+              className="px-8 py-4 bg-white text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition"
+            >
+              Browse All Rooms
+            </a>
+            <a
+              href="/post"
+              className="px-8 py-4 bg-blue-700 text-white rounded-xl font-semibold hover:bg-blue-800 transition"
+            >
+              List Your Room Free
+            </a>
+          </div>
+        </section>
       </main>
+
+      <Footer />
     </div>
   );
 }

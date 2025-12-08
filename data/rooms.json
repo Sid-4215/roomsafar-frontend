@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "rent": 6500,
+    "area": "Hinjewadi Phase 2",
+    "type": "1RK",
+    "furnished": true,
+    "whatsapp": "919876543210",
+    "image": "https://images.unsplash.com/photo-1505691723518-36a5ac3be353?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    "id": 2,
+    "rent": 8500,
+    "area": "Kharadi",
+    "type": "Shared",
+    "furnished": false,
+    "whatsapp": "919812345678",
+    "image": "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    "id": 3,
+    "rent": 9500,
+    "area": "Viman Nagar",
+    "type": "1BHK",
+    "furnished": true,
+    "whatsapp": "919834567890",
+    "image": "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=800&q=80"
+  }
+]

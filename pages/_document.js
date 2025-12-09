@@ -9,35 +9,51 @@ export default function Document() {
         {/* Character Encoding */}
         <meta charSet="UTF-8" />
 
-        {/* Mobile Viewport Optimization */}
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-        {/* Theme Color (browser UI color) */}
+        {/* Theme Color */}
         <meta name="theme-color" content="#2563eb" />
 
-        {/* Preconnect for Performance */}
+        {/* Preconnect (Performance) */}
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
 
         {/* Favicon */}
         <link rel="icon" href="/favicon.ico" />
 
-        {/* Canonical URL (SEO Best Practice) */}
-        <link rel="canonical" href="https://roomsafar.in/" />
+        {/* Canonical URL */}
+        <link rel="canonical" href="https://roomsafar.com/" />
 
         {/* Google Identity API */}
         <script async src="https://accounts.google.com/gsi/client"></script>
 
-        {/* Basic SEO Defaults */}
+        {/* ---------- SEO META TAGS ---------- */}
         <meta
           name="description"
-          content="Find verified rooms, PGs, shared flats, and roommates in Pune — 100% no-brokerage, direct owner contact. Roomsafar helps you find your perfect stay with ease."
+          content="Find verified rooms, PGs & shared flats in Pune. 100% no-brokerage, direct owner contact, instant WhatsApp, real photos. Roomsafar makes house hunting simple."
         />
         <meta
           name="keywords"
           content="rooms in pune, flat for rent pune, pg pune, shared room pune, no brokerage rooms pune, roomsafar"
         />
         <meta name="author" content="Roomsafar" />
+
+        {/* ---------- OPEN GRAPH (SOCIAL SHARE) ---------- */}
+        <meta property="og:title" content="Roomsafar – Find Rooms, PG & Shared Flats in Pune" />
+        <meta
+          property="og:description"
+          content="Search verified & no-brokerage rooms in Pune. Direct owner contact. Instant WhatsApp. Real photos."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://roomsafar.com/" />
+        <meta property="og:image" content="https://roomsafar.com/og-image.png" />
+
+        {/* ---------- TWITTER CARD ---------- */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Roomsafar – Find Rooms, PG & Shared Flats in Pune" />
+        <meta
+          name="twitter:description"
+          content="Search verified & no-brokerage rooms in Pune. Direct owner contact. Instant WhatsApp. Real photos."
+        />
+        <meta name="twitter:image" content="https://roomsafar.com/og-image.png" />
 
       </Head>
 

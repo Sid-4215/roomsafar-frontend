@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import Head from "next/head";
 import { useRouter } from "next/router";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { roomsAPI } from "../../services/api";
+import SEO from "../../components/SEO";
 import {
   FiMapPin,
   FiHome,
@@ -134,53 +134,44 @@ export default function RoomDetails() {
 
   return (
     <>
-      {/* ======================== */}
-      {/*        ⭐ SEO TAGS ⭐       */}
-      {/* ======================== */}
-      <Head>
-        <title>{seoTitle}</title>
+    <SEO
+      title={seoTitle}
+      description={seoDesc}
+      url={canonicalUrl}
+      image={images[0] || "https://roomsafar.com/og-image.webp"}
+    />
 
-        <meta name="description" content={seoDesc} />
-        <link rel="canonical" href={canonicalUrl} />
-
-        {/* Open Graph */}
-        <meta property="og:title" content={seoTitle} />
-        <meta property="og:description" content={seoDesc} />
-        <meta property="og:image" content={images[0] || "/og-image.jpg"} />
-        <meta property="og:url" content={canonicalUrl} />
-        <meta property="og:type" content="product" />
-
-        {/* Twitter */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={seoTitle} />
-        <meta name="twitter:description" content={seoDesc} />
-        <meta name="twitter:image" content={images[0] || "/og-image.jpg"} />
-
-        {/* JSON-LD STRUCTURED DATA */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Product",
-              name: room.title,
-              description: room.description,
-              image: images,
-              offers: {
-                "@type": "Offer",
-                priceCurrency: "INR",
-                price: room.rent,
-                availability: "https://schema.org/InStock",
-              },
-              brand: {
-                "@type": "Brand",
-                name: "Roomsafar",
-              },
-              url: canonicalUrl,
-            }),
-          }}
-        />
-      </Head>
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: room.title || `${room.type} in ${area}, ${city}`,
+            description: room.description?.substring(0, 300) || seoDesc,
+            image: images,
+            brand: {
+              "@type": "Brand",
+              name: "Roomsafar",
+            },
+            offers: {
+              "@type": "Offer",
+              priceCurrency: "INR",
+              price: room.rent,
+              availability: "https://schema.org/InStock",
+            },
+            url: canonicalUrl,
+            areaServed: city,
+            address: {
+              "@type": "PostalAddress",
+              addressLocality: area,
+              addressRegion: city,
+              addressCountry: "IN"
+            }
+          }),
+        }}
+      />
 
       {/* ======================== */}
       {/*       UI STARTS HERE     */}

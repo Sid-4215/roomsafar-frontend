@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Head from "next/head";
+import SEO from "../components/SEO";
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
 import Footer from "../components/Footer";
@@ -67,69 +67,27 @@ export default function Home() {
 
   return (
     <>
-      {/* =============================== */}
-      {/*            SEO META             */}
-      {/* =============================== */}
-      <Head>
-        <title>
-          Roomsafar – Rooms, PG, Flats & Shared Rooms in Pune | No Brokerage
-        </title>
+      {/* SEO */}
+      <SEO
+        title="Roomsafar – Rooms, PG, Flats & Shared Rooms in Pune | No Brokerage"
+        description="Find verified rooms, PGs & shared flats in Pune. No brokerage, direct owner contact, real photos."
+        url="https://roomsafar.com/"
+      />
 
-        <meta
-          name="description"
-          content="Find verified rooms, PGs and shared flats in Pune. 100% no-brokerage, real photos, direct owner contact. Explore rooms in Hinjewadi, Baner, Kharadi, Viman Nagar & more."
-        />
-
-        <meta
-          name="keywords"
-          content="rooms in pune, pg pune, flat for rent pune, no brokerage pune rooms, shared room pune, roomsafar"
-        />
-
-        <meta name="author" content="Roomsafar" />
-        <link rel="canonical" href="https://roomsafar.com/" />
-
-        {/* Open Graph */}
-        <meta
-          property="og:title"
-          content="Roomsafar – Find Rooms, PG & Shared Flats in Pune"
-        />
-        <meta
-          property="og:description"
-          content="Search verified & no-brokerage rooms in Pune. Direct owner contact. Instant WhatsApp. Real photos."
-        />
-        <meta property="og:url" content="https://roomsafar.com/" />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content="https://roomsafar.com/og-image.png" />
-
-        {/* Twitter */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Roomsafar – Rooms in Pune" />
-        <meta
-          name="twitter:description"
-          content="Find verified rooms and PGs in Pune. No brokerage."
-        />
-        <meta name="twitter:image" content="https://roomsafar.com/og-image.png" />
-
-        {/* JSON-LD (Structured Data) */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              name: "Roomsafar",
-              url: "https://roomsafar.com",
-              description:
-                "Find verified rooms and PGs in Pune with no brokerage and direct owner contact.",
-              potentialAction: {
-                "@type": "SearchAction",
-                target: "https://roomsafar.com/rooms?search={query}",
-                "query-input": "required name=query",
-              },
-            }),
-          }}
-        />
-      </Head>
+      {/* JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "Roomsafar",
+            url: "https://roomsafar.com",
+            description:
+              "Find verified rooms and PGs in Pune with no brokerage and direct owner contact.",
+          }),
+        }}
+      />
 
       {/* =============================== */}
       {/*            UI START             */}

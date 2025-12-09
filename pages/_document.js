@@ -1,11 +1,9 @@
-// pages/_document.js
 import { Html, Head, Main, NextScript } from "next/document";
 
 export default function Document() {
   return (
     <Html lang="en" className="scroll-smooth">
       <Head>
-
         {/* Character Encoding */}
         <meta charSet="UTF-8" />
 
@@ -19,42 +17,8 @@ export default function Document() {
         {/* Favicon */}
         <link rel="icon" href="/favicon.ico" />
 
-        {/* Canonical URL */}
-        <link rel="canonical" href="https://roomsafar.com/" />
-
-        {/* Google Identity API */}
+        {/* Google Login */}
         <script async src="https://accounts.google.com/gsi/client"></script>
-
-        {/* ---------- SEO META TAGS ---------- */}
-        <meta
-          name="description"
-          content="Find verified rooms, PGs & shared flats in Pune. 100% no-brokerage, direct owner contact, instant WhatsApp, real photos. Roomsafar makes house hunting simple."
-        />
-        <meta
-          name="keywords"
-          content="rooms in pune, flat for rent pune, pg pune, shared room pune, no brokerage rooms pune, roomsafar"
-        />
-        <meta name="author" content="Roomsafar" />
-
-        {/* ---------- OPEN GRAPH (SOCIAL SHARE) ---------- */}
-        <meta property="og:title" content="Roomsafar – Find Rooms, PG & Shared Flats in Pune" />
-        <meta
-          property="og:description"
-          content="Search verified & no-brokerage rooms in Pune. Direct owner contact. Instant WhatsApp. Real photos."
-        />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://roomsafar.com/" />
-        <meta property="og:image" content="https://roomsafar.com/og-image.png" />
-
-        {/* ---------- TWITTER CARD ---------- */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Roomsafar – Find Rooms, PG & Shared Flats in Pune" />
-        <meta
-          name="twitter:description"
-          content="Search verified & no-brokerage rooms in Pune. Direct owner contact. Instant WhatsApp. Real photos."
-        />
-        <meta name="twitter:image" content="https://roomsafar.com/og-image.png" />
-
       </Head>
 
       <body className="antialiased bg-gray-50 text-slate-900">

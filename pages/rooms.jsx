@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import Head from "next/head";
+import SEO from "../components/SEO";
 import { useRouter } from "next/router";
 import Navbar from "../components/Navbar";
 import RoomCard from "../components/RoomCard";
@@ -31,8 +31,8 @@ export default function Rooms() {
 
   /* 🌟 Dynamic SEO text */
   const areaSEO = filters.area ? ` in ${filters.area}` : "";
-  const fullTitle = `Rooms${areaSEO} in Pune | Roomsafar`;
-  const fullDesc = `Browse verified rooms${areaSEO} in Pune. No brokerage, real photos, direct owner contact. Filters for rent, gender, furnishing, and more.`;
+  const title = `Rooms${areaSEO} in Pune | Roomsafar`;
+  const desc = `Browse verified rooms${areaSEO} in Pune. No brokerage, real photos, direct owner contact. Filters for rent, gender, furnishing, and more.`;
 
   const fetchRooms = useCallback(
     async (newFilters = {}, reset = false, newPage = 0) => {
@@ -139,47 +139,27 @@ export default function Rooms() {
   ];
 
   return (
-    <>
-      {/* ============================= */}
-      {/*         ⭐ SEO TAGS ⭐          */}
-      {/* ============================= */}
-      <Head>
-        <title>{fullTitle}</title>
-        <meta name="description" content={fullDesc} />
-        <meta
-          name="keywords"
-          content="rooms in pune, room rent pune, PG in pune, no brokerage rooms pune, flat for rent pune, shared accommodation pune"
-        />
+     <>
+      {/* SEO */}
+      <SEO
+        title={title}
+        description={desc}
+        url={`https://roomsafar.com${router.asPath}`}
+      />
 
-        <link rel="canonical" href={`https://roomsafar.com/rooms${router.asPath}`} />
-
-        {/* Open Graph */}
-        <meta property="og:title" content={fullTitle} />
-        <meta property="og:description" content={fullDesc} />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={`https://roomsafar.com${router.asPath}`} />
-        <meta property="og:image" content="https://roomsafar.com/og-image.png" />
-
-        {/* Twitter */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={fullTitle} />
-        <meta name="twitter:description" content={fullDesc} />
-
-        {/* JSON-LD Structured Data */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "SearchResultsPage",
-              name: fullTitle,
-              description: fullDesc,
-              url: `https://roomsafar.com${router.asPath}`,
-              numberOfItems: totalResults,
-            }),
-          }}
-        />
-      </Head>
+      {/* JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SearchResultsPage",
+            name: title,
+            url: `https://roomsafar.com${router.asPath}`,
+            numberOfItems: totalResults,
+          }),
+        }}
+      />
 
       {/* ============================= */}
       {/*            UI START            */}

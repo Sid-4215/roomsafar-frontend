@@ -25,7 +25,7 @@ export default function Document() {
         {/* Google Identity API */}
         <script async src="https://accounts.google.com/gsi/client"></script>
 
-        {/* ---------- SEO META TAGS ---------- */}
+        {/* ---------- BASIC SEO TAGS ---------- */}
         <meta
           name="description"
           content="Find verified rooms, PGs & shared flats in Pune. 100% no-brokerage, direct owner contact, instant WhatsApp, real photos. Roomsafar makes house hunting simple."
@@ -44,7 +44,10 @@ export default function Document() {
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://roomsafar.com/" />
-        <meta property="og:image" content="https://roomsafar.com/og-image.png" />
+        <meta property="og:image" content="https://roomsafar.com/og-image.png?v=2" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
 
         {/* ---------- TWITTER CARD ---------- */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -53,7 +56,7 @@ export default function Document() {
           name="twitter:description"
           content="Search verified & no-brokerage rooms in Pune. Direct owner contact. Instant WhatsApp. Real photos."
         />
-        <meta name="twitter:image" content="https://roomsafar.com/og-image.png" />
+        <meta name="twitter:image" content="https://roomsafar.com/og-image.png?v=2" />
 
       </Head>
 

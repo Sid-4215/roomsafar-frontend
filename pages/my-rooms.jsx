@@ -11,7 +11,7 @@ import {
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { useRouter } from "next/router";
-import Spinner from "../components/Spinner";   // ✅ ADD THIS
+import Spinner from "../components/Spinner";
 
 export default function MyRooms() {
   const { isAuthenticated, loading: authLoading } = useContext(AuthContext);

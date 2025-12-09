@@ -6,7 +6,7 @@ import Navbar from "../components/Navbar";
 import { roomsAPI, uploadService } from "../services/api";
 import toast from "react-hot-toast";
 import imageCompression from "browser-image-compression";
-import Spinner from "../components/Spinner"; // ✅ Unified spinner
+import Spinner from "../components/Spinner";
 
 // Icons
 import {

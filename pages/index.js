@@ -86,7 +86,7 @@ export default function Home() {
         />
 
         <meta name="author" content="Roomsafar" />
-        <link rel="canonical" href="https://roomsafar.in/" />
+        <link rel="canonical" href="https://roomsafar.com/" />
 
         {/* Open Graph */}
         <meta
@@ -97,9 +97,9 @@ export default function Home() {
           property="og:description"
           content="Search verified & no-brokerage rooms in Pune. Direct owner contact. Instant WhatsApp. Real photos."
         />
-        <meta property="og:url" content="https://roomsafar.in/" />
+        <meta property="og:url" content="https://roomsafar.com/" />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content="https://roomsafar.in/og-image.png" />
+        <meta property="og:image" content="https://roomsafar.com/og-image.png" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -108,7 +108,7 @@ export default function Home() {
           name="twitter:description"
           content="Find verified rooms and PGs in Pune. No brokerage."
         />
-        <meta name="twitter:image" content="https://roomsafar.in/og-image.png" />
+        <meta name="twitter:image" content="https://roomsafar.com/og-image.png" />
 
         {/* JSON-LD (Structured Data) */}
         <script
@@ -118,12 +118,12 @@ export default function Home() {
               "@context": "https://schema.org",
               "@type": "WebSite",
               name: "Roomsafar",
-              url: "https://roomsafar.in",
+              url: "https://roomsafar.com",
               description:
                 "Find verified rooms and PGs in Pune with no brokerage and direct owner contact.",
               potentialAction: {
                 "@type": "SearchAction",
-                target: "https://roomsafar.in/rooms?search={query}",
+                target: "https://roomsafar.com/rooms?search={query}",
                 "query-input": "required name=query",
               },
             }),

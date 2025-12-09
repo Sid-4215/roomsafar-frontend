@@ -151,14 +151,14 @@ export default function Rooms() {
           content="rooms in pune, room rent pune, PG in pune, no brokerage rooms pune, flat for rent pune, shared accommodation pune"
         />
 
-        <link rel="canonical" href={`https://roomsafar.in/rooms${router.asPath}`} />
+        <link rel="canonical" href={`https://roomsafar.com/rooms${router.asPath}`} />
 
         {/* Open Graph */}
         <meta property="og:title" content={fullTitle} />
         <meta property="og:description" content={fullDesc} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content={`https://roomsafar.in${router.asPath}`} />
-        <meta property="og:image" content="https://roomsafar.in/og-rooms.png" />
+        <meta property="og:url" content={`https://roomsafar.com${router.asPath}`} />
+        <meta property="og:image" content="https://roomsafar.com/og-image.png" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -174,7 +174,7 @@ export default function Rooms() {
               "@type": "SearchResultsPage",
               name: fullTitle,
               description: fullDesc,
-              url: `https://roomsafar.in${router.asPath}`,
+              url: `https://roomsafar.com${router.asPath}`,
               numberOfItems: totalResults,
             }),
           }}

@@ -130,7 +130,7 @@ export default function RoomDetails() {
     ? room.description.substring(0, 155)
     : `Find a ${room.type} in ${area}, ${city} for ₹${room.rent}/month. Verified listing on Roomsafar.`;
 
-  const canonicalUrl = `https://roomsafar.in/room/${id}`;
+  const canonicalUrl = `https://roomsafar.com/room/${id}`;
 
   return (
     <>
@@ -146,7 +146,7 @@ export default function RoomDetails() {
         {/* Open Graph */}
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDesc} />
-        <meta property="og:image" content={images[0] || "/no-image.jpg"} />
+        <meta property="og:image" content={images[0] || "/og-image.jpg"} />
         <meta property="og:url" content={canonicalUrl} />
         <meta property="og:type" content="product" />
 
@@ -154,7 +154,7 @@ export default function RoomDetails() {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDesc} />
-        <meta name="twitter:image" content={images[0] || "/no-image.jpg"} />
+        <meta name="twitter:image" content={images[0] || "/og-image.jpg"} />
 
         {/* JSON-LD STRUCTURED DATA */}
         <script

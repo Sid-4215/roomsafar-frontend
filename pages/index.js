@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
-import CombinedBar from "../components/CombinedBar";
 import Footer from "../components/Footer";
 import RoomCard from "../components/RoomCard";
 import { roomsAPI } from "../services/api";
@@ -23,33 +22,32 @@ export default function Home() {
     {
       icon: "🔐",
       title: "Verified Listings",
-      description: "Every room is personally verified for authenticity"
+      description: "Every room is personally verified for authenticity",
     },
     {
       icon: "📸",
       title: "Real Photos",
-      description: "No stock images, only actual room photos"
+      description: "No stock images, only actual room photos",
     },
     {
       icon: "💰",
       title: "No Brokerage",
-      description: "Direct owner contact, zero brokerage fees"
+      description: "Direct owner contact, zero brokerage fees",
     },
     {
       icon: "⚡",
       title: "Instant Contact",
-      description: "Connect with owners via WhatsApp instantly"
-    }
+      description: "Connect with owners via WhatsApp instantly",
+    },
   ];
 
   useEffect(() => {
     const fetchFeaturedRooms = async () => {
       try {
         const data = await roomsAPI.getFeaturedRooms();
-        
-        // Handle different response structures
+
         let roomsArray = [];
-        
+
         if (Array.isArray(data)) {
           roomsArray = data;
         } else if (data?.content && Array.isArray(data.content)) {
@@ -57,14 +55,12 @@ export default function Home() {
         } else if (data?.data && Array.isArray(data.data)) {
           roomsArray = data.data;
         } else {
-          console.warn('Unexpected API response structure:', data);
           roomsArray = [];
         }
-        
+
         setFeaturedRooms(roomsArray.slice(0, 6));
       } catch (error) {
-        console.error('Error fetching featured rooms:', error);
-        toast.error('Failed to load featured rooms');
+        toast.error("Failed to load featured rooms");
         setFeaturedRooms([]);
       } finally {
         setLoading(false);
@@ -74,30 +70,12 @@ export default function Home() {
     fetchFeaturedRooms();
   }, []);
 
-  const handleSearch = (filters) => {
-    const params = new URLSearchParams();
-    
-    if (filters.area) params.append("area", filters.area);
-    if (filters.maxRent) params.append("maxRent", filters.maxRent);
-    if (filters.type) params.append("type", filters.type);
-    if (filters.gender) params.append("gender", filters.gender);
-    
-    window.location.href = `/rooms?${params.toString()}`;
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-white">
       <Navbar />
-      
-      {/* Hero Section */}
+
+      {/* Hero Section (Contains Search Bar Inside It Now) */}
       <Hero />
-      
-      {/* Search Section */}
-      <div className="relative -mt-16 z-40 px-4">
-        <div className="max-w-6xl mx-auto">
-          <CombinedBar onSearch={handleSearch} />
-        </div>
-      </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-20">
         {/* Features Section */}
@@ -110,10 +88,10 @@ export default function Home() {
               We&apos;re changing the way people find rooms in Pune with transparency and trust
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <div 
+              <div
                 key={index}
                 className="group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300"
               >
@@ -123,9 +101,7 @@ export default function Home() {
                 <h3 className="text-xl font-semibold text-slate-900 mb-2">
                   {feature.title}
                 </h3>
-                <p className="text-slate-600">
-                  {feature.description}
-                </p>
+                <p className="text-slate-600">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -142,15 +118,14 @@ export default function Home() {
                 Explore rooms in Pune&apos;s most sought-after localities
               </p>
             </div>
-            <a 
-              href="/areas" 
+            <a
+              href="/areas"
               className="text-blue-600 font-medium hover:text-blue-700 flex items-center gap-2"
             >
-              View all areas
-              <span>→</span>
+              View all areas <span>→</span>
             </a>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {popularAreas.map((area) => (
               <a
@@ -158,18 +133,14 @@ export default function Home() {
                 href={`/rooms?area=${encodeURIComponent(area.name)}`}
                 className="group relative overflow-hidden rounded-2xl bg-gradient-to-br via-transparent p-6 transition-all duration-300 hover:scale-105"
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${area.color} opacity-10 group-hover:opacity-20 transition-opacity`} />
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${area.color} opacity-10 group-hover:opacity-20 transition-opacity`}
+                />
                 <div className="relative z-10">
                   <h3 className="text-lg font-semibold text-slate-900 mb-1">
                     {area.name}
                   </h3>
-                  <p className="text-sm text-slate-600">
-                    {area.count}+ listings
-                  </p>
-                  <div className="mt-4 text-blue-600 font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Explore
-                    <span className="transform group-hover:translate-x-1 transition-transform">→</span>
-                  </div>
+                  <p className="text-sm text-slate-600">{area.count}+ listings</p>
                 </div>
               </a>
             ))}
@@ -180,21 +151,20 @@ export default function Home() {
         <section className="mb-20">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-slate-900">
-                Featured Rooms
-              </h2>
+              <h2 className="text-3xl font-bold text-slate-900">Featured Rooms</h2>
               <p className="text-slate-600 mt-2">
                 Handpicked rooms with great reviews and amenities
               </p>
             </div>
-            <a 
-              href="/rooms" 
+
+            <a
+              href="/rooms"
               className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:shadow-lg transition"
             >
               View All Rooms
             </a>
           </div>
-          
+
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
@@ -217,9 +187,6 @@ export default function Home() {
               <h3 className="text-xl font-semibold text-slate-900 mb-2">
                 No featured rooms available
               </h3>
-              <p className="text-slate-600 mb-6">
-                Check back soon for new listings
-              </p>
             </div>
           )}
         </section>
@@ -232,6 +199,7 @@ export default function Home() {
           <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
             Join thousands of students and professionals who found their ideal stay through Roomsafar
           </p>
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="/rooms"

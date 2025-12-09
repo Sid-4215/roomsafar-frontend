@@ -2,10 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Navbar from "../components/Navbar";
 import RoomCard from "../components/RoomCard";
-import CombinedBar from "../components/CombinedBar";
 import Footer from "../components/Footer";
+import AnimatedSearch from "../components/search/AnimatedSearch";
+import FilterModal from "../components/FilterModal.jsx";
 import { roomsAPI } from "../services/api";
-import { FiFilter, FiGrid, FiList, FiMapPin, FiRefreshCw, FiLoader } from "react-icons/fi";
+import {
+  FiFilter,
+  FiGrid,
+  FiList,
+  FiRefreshCw,
+  FiLoader,
+} from "react-icons/fi";
 import toast from "react-hot-toast";
 
 export default function Rooms() {
@@ -13,143 +20,130 @@ export default function Rooms() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [viewMode, setViewMode] = useState('grid');
-  const [sortBy, setSortBy] = useState('createdAt');
+  const [viewMode, setViewMode] = useState("grid");
+  const [sortBy, setSortBy] = useState("createdAt");
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [totalResults, setTotalResults] = useState(0);
   const [filters, setFilters] = useState({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const fetchRooms = useCallback(async (newFilters = {}, reset = false, newPage = 0) => {
-    const currentFilters = { ...filters, ...newFilters };
-    
-    if (reset) {
-      setLoading(true);
-      setPage(0);
-    } else if (newPage > 0) {
-      setLoadingMore(true);
-    }
-    
-    const params = {
-      page: reset ? 0 : newPage,
-      size: 20,
-      sortBy,
-      sortDir: 'desc',
-      ...currentFilters
-    };
-    
-    // Remove empty filters
-    Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === undefined || params[key] === null) {
-        delete params[key];
-      }
-    });
+  const fetchRooms = useCallback(
+    async (newFilters = {}, reset = false, newPage = 0) => {
+      const currentFilters = { ...filters, ...newFilters };
 
-    try {
-      const data = await roomsAPI.searchRooms(params);
-      
-      let roomsArray = [];
-      let total = 0;
-      
-      if (Array.isArray(data)) {
-        roomsArray = data;
-        total = data.length;
-      } else if (data?.content && Array.isArray(data.content)) {
-        roomsArray = data.content;
-        total = data.totalElements || 0;
-      } else {
-        roomsArray = [];
-        total = 0;
+      if (reset) {
+        setLoading(true);
+        setPage(0);
+      } else if (newPage > 0) {
+        setLoadingMore(true);
       }
-      
-      if (reset || newPage === 0) {
-        setRooms(roomsArray);
-      } else {
-        setRooms(prev => [...prev, ...roomsArray]);
-      }
-      
-      setTotalResults(total);
-      setHasMore(roomsArray.length === 20);
-      setFilters(currentFilters);
-      
-      // Update URL without page refresh
-      const queryParams = new URLSearchParams();
-      Object.entries(currentFilters).forEach(([key, value]) => {
-        if (value) queryParams.set(key, value);
+
+      const params = {
+        page: reset ? 0 : newPage,
+        size: 20,
+        sortBy: sortBy === "rentDesc" ? "rent" : sortBy,
+        sortDir: sortBy === "rent" ? "asc" : "desc",
+        ...currentFilters,
+      };
+
+      Object.keys(params).forEach((key) => {
+        if (!params[key]) delete params[key];
       });
-      
-      const newUrl = `/rooms${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-      window.history.replaceState({}, '', newUrl);
-      
-    } catch (error) {
-      console.error('Failed to load rooms:', error);
-      toast.error('Failed to load rooms. Please try again.');
-      setRooms([]);
-      setTotalResults(0);
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [filters, sortBy]);
 
-  // Initial load
-  useEffect(() => {
-    const params = Object.fromEntries(
-      new URLSearchParams(window.location.search)
-    );
-    
-    // Convert string values to proper types
-    const processedParams = {};
-    Object.entries(params).forEach(([key, value]) => {
-      if (key === 'maxRent' || key === 'minRent') {
-        processedParams[key] = parseInt(value) || undefined;
-      } else if (value) {
-        processedParams[key] = value;
+      try {
+        const data = await roomsAPI.searchRooms(params);
+
+        let roomsArray = [];
+        let total = 0;
+
+        if (Array.isArray(data)) {
+          roomsArray = data;
+          total = data.length;
+        } else if (data?.content) {
+          roomsArray = data.content;
+          total = data.totalElements || 0;
+        }
+
+        reset || newPage === 0
+          ? setRooms(roomsArray)
+          : setRooms((prev) => [...prev, ...roomsArray]);
+
+        setTotalResults(total);
+        setHasMore(roomsArray.length === 20);
+        setFilters(currentFilters);
+
+        const queryParams = new URLSearchParams();
+        Object.entries(currentFilters).forEach(([k, v]) => v && queryParams.set(k, v));
+
+        window.history.replaceState({}, "", `/rooms?${queryParams.toString()}`);
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to load rooms.");
+        setRooms([]);
+        setTotalResults(0);
+        setHasMore(false);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
+    },
+    [filters, sortBy]
+  );
+
+  useEffect(() => {
+    const params = Object.fromEntries(new URLSearchParams(window.location.search));
+    const processed = {};
+
+    Object.entries(params).forEach(([key, value]) => {
+      processed[key] =
+        key === "maxRent" || key === "minRent" ? Number(value) : value;
     });
-    
-    fetchRooms(processedParams, true);
+
+    setFilters(processed);
+    fetchRooms(processed, true);
   }, []);
 
-  // Handle search from CombinedBar
-  const handleSearch = (searchFilters) => {
-    setPage(0);
-    fetchRooms(searchFilters, true);
+  const handleQuickSearch = (area) => {
+    fetchRooms({ ...filters, area }, true);
   };
 
-  // Load more rooms
+  const handleApplyFilters = (newFilters) => {
+    fetchRooms(newFilters, true);
+  };
+
   const loadMore = () => {
     if (hasMore && !loadingMore) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchRooms({}, false, nextPage);
+      const next = page + 1;
+      setPage(next);
+      fetchRooms({}, false, next);
     }
   };
 
-  // Handle sort change
   const handleSortChange = (e) => {
-    const newSortBy = e.target.value;
-    setSortBy(newSortBy);
-    setPage(0);
+    setSortBy(e.target.value);
     fetchRooms({}, true);
   };
 
   const sortOptions = [
-    { value: 'createdAt', label: 'Newest First' },
-    { value: 'rent', label: 'Price: Low to High' },
-    { value: 'rentDesc', label: 'Price: High to Low' },
-    { value: 'area', label: 'Area' },
+    { value: "createdAt", label: "Newest First" },
+    { value: "rent", label: "Price: Low to High" },
+    { value: "rentDesc", label: "Price: High to Low" },
+    { value: "area", label: "Area" },
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
       <Navbar />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-20">
-        {/* Search Bar */}
-        <div className="mb-8">
-          <CombinedBar onSearch={handleSearch} initialFilters={filters} />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-20">
+
+        {/* ⭐ Sticky Airbnb Search (CLEAN VERSION) */}
+        <div className="sticky top-[88px] z-40 px-4">
+          <AnimatedSearch
+            initialArea={filters.area || ""}
+            onSearch={handleQuickSearch}
+          />
         </div>
 
         {/* Header */}
@@ -161,42 +155,54 @@ export default function Rooms() {
             <p className="text-slate-600 mt-2">
               {loading ? (
                 <span className="inline-flex items-center gap-2">
-                  <FiRefreshCw className="animate-spin" />
-                  Searching rooms...
+                  <FiRefreshCw className="animate-spin" /> Loading rooms...
                 </span>
               ) : (
-                `Found ${totalResults.toLocaleString()} room${totalResults !== 1 ? 's' : ''} matching your criteria`
+                `Found ${totalResults.toLocaleString()} rooms`
               )}
             </p>
           </div>
-          
-          {/* Controls */}
-          <div className="flex items-center gap-4">
-            {/* View Mode */}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setFiltersOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-sm hover:shadow transition"
+            >
+              <FiFilter size={16} className="text-slate-600" />
+              Filters
+            </button>
+
             <div className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-1">
               <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition ${viewMode === 'grid' ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}
+                onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-lg transition ${
+                  viewMode === "grid"
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
               >
                 <FiGrid size={20} />
               </button>
               <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition ${viewMode === 'list' ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}
+                onClick={() => setViewMode("list")}
+                className={`p-2 rounded-lg transition ${
+                  viewMode === "list"
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
               >
                 <FiList size={20} />
               </button>
             </div>
-            
-            {/* Sort */}
+
             <select
               value={sortBy}
               onChange={handleSortChange}
-              className="px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+              className="px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-white"
             >
-              {sortOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              {sortOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
             </select>
@@ -220,51 +226,40 @@ export default function Rooms() {
             <h3 className="text-xl font-semibold text-slate-900 mb-2">
               No rooms found
             </h3>
-            <p className="text-slate-600 mb-6">
-              Try adjusting your filters or search in a different area
-            </p>
             <button
-              onClick={() => {
-                setFilters({});
-                fetchRooms({}, true);
-              }}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:shadow-lg transition"
+              onClick={() => fetchRooms({}, true)}
+              className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-xl"
             >
-              Clear All Filters
+              Clear Filters
             </button>
           </div>
         ) : (
           <>
-            {/* Rooms Grid/List */}
-            <div className={`${
-              viewMode === 'grid' 
-                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-                : 'space-y-4'
-            }`}>
+            <div
+              className={`${
+                viewMode === "grid"
+                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                  : "space-y-4"
+              }`}
+            >
               {rooms.map((room) => (
-                <RoomCard 
-                  key={room.id} 
-                  room={room} 
-                  viewMode={viewMode}
-                />
+                <RoomCard key={room.id} room={room} viewMode={viewMode} />
               ))}
             </div>
-            
-            {/* Load More */}
+
             {hasMore && (
               <div className="mt-12 text-center">
                 <button
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="px-8 py-3.5 bg-white border-2 border-slate-200 rounded-xl font-medium hover:bg-slate-50 hover:border-slate-300 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mx-auto"
+                  className="px-8 py-3.5 bg-white border-2 border-slate-200 rounded-xl font-medium hover:bg-slate-50 flex items-center justify-center gap-2"
                 >
                   {loadingMore ? (
                     <>
-                      <FiLoader className="animate-spin" />
-                      Loading more rooms...
+                      <FiLoader className="animate-spin" /> Loading...
                     </>
                   ) : (
-                    'Load More Rooms'
+                    "Load More"
                   )}
                 </button>
               </div>
@@ -275,18 +270,25 @@ export default function Rooms() {
         {/* Stats */}
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { label: 'Average Response Time', value: '2.4 hours' },
-            { label: 'Owner Verified', value: '98%' },
-            { label: 'Satisfaction Rate', value: '4.8/5' },
-            { label: 'Instant Contact', value: '100%' },
-          ].map((stat, index) => (
-            <div key={index} className="bg-white p-6 rounded-2xl border border-slate-200 text-center">
-              <div className="text-2xl font-bold text-slate-900 mb-1">{stat.value}</div>
+            { label: "Average Response", value: "2.4 hrs" },
+            { label: "Owner Verified", value: "98%" },
+            { label: "Satisfaction", value: "4.8/5" },
+            { label: "Instant Contact", value: "100%" },
+          ].map((stat, i) => (
+            <div key={i} className="bg-white p-6 rounded-2xl border text-center">
+              <div className="text-2xl font-bold">{stat.value}</div>
               <div className="text-sm text-slate-600">{stat.label}</div>
             </div>
           ))}
         </div>
       </main>
+
+      <FilterModal
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        initialFilters={filters}
+        onApply={handleApplyFilters}
+      />
 
       <Footer />
     </div>

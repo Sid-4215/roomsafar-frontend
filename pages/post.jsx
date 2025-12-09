@@ -240,25 +240,30 @@ export default function PostRoom() {
   /* ========================================
       VALIDATION
   ======================================== */
-  const validateForm = useCallback(() => {
-    const errors = [];
+const validateForm = useCallback(() => {
+  const errors = [];
 
-    if (!form.rent || +form.rent < 1000) errors.push("Rent must be at least ₹1000");
-    if (!formdeposit < 0) errors.push("Deposit must be valid");
-    if (!form.type) errors.push("Select room type");
-    if (!form.furnished) errors.push("Select furnishing");
-    if (!form.gender) errors.push("Select gender");
-    if (!/^\d{10}$/.test(form.whatsapp)) errors.push("Invalid WhatsApp number");
-    if (!form.address.line1) errors.push("Enter address");
-    if (!form.address.area) errors.push("Enter locality");
-    if (!/^\d{6}$/.test(form.address.pincode)) errors.push("Invalid pincode");
-    if (form.imageUrls.length < 1)
-      errors.push("Upload at least 1 image and click Upload Photos");
+  if (!form.rent || +form.rent < 1000) errors.push("Rent must be at least ₹1000");
 
-    errors.forEach(toast.error);
+  // ✅ FIXED DEPOSIT VALIDATION
+  if (form.deposit === "" || isNaN(+form.deposit) || +form.deposit < 0) {
+    errors.push("Deposit must be valid");
+  }
 
-    return errors.length === 0;
-  }, [form]);
+  if (!form.type) errors.push("Select room type");
+  if (!form.furnished) errors.push("Select furnishing");
+  if (!form.gender) errors.push("Select gender");
+  if (!/^\d{10}$/.test(form.whatsapp)) errors.push("Invalid WhatsApp number");
+  if (!form.address.line1) errors.push("Enter address");
+  if (!form.address.area) errors.push("Enter locality");
+  if (!/^\d{6}$/.test(form.address.pincode)) errors.push("Invalid pincode");
+  if (form.imageUrls.length < 1)
+    errors.push("Upload at least 1 image and click Upload Photos");
+
+  errors.forEach(toast.error);
+
+  return errors.length === 0;
+}, [form]);
 
   /* ========================================
       SUBMIT FORM

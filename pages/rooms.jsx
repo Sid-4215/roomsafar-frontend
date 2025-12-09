@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import Navbar from "../components/Navbar";
 import RoomCard from "../components/RoomCard";
@@ -27,6 +28,11 @@ export default function Rooms() {
   const [totalResults, setTotalResults] = useState(0);
   const [filters, setFilters] = useState({});
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  /* 🌟 Dynamic SEO text */
+  const areaSEO = filters.area ? ` in ${filters.area}` : "";
+  const fullTitle = `Rooms${areaSEO} in Pune | Roomsafar`;
+  const fullDesc = `Browse verified rooms${areaSEO} in Pune. No brokerage, real photos, direct owner contact. Filters for rent, gender, furnishing, and more.`;
 
   const fetchRooms = useCallback(
     async (newFilters = {}, reset = false, newPage = 0) => {
@@ -133,164 +139,211 @@ export default function Rooms() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
-      <Navbar />
+    <>
+      {/* ============================= */}
+      {/*         ⭐ SEO TAGS ⭐          */}
+      {/* ============================= */}
+      <Head>
+        <title>{fullTitle}</title>
+        <meta name="description" content={fullDesc} />
+        <meta
+          name="keywords"
+          content="rooms in pune, room rent pune, PG in pune, no brokerage rooms pune, flat for rent pune, shared accommodation pune"
+        />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-20">
+        <link rel="canonical" href={`https://roomsafar.in/rooms${router.asPath}`} />
 
-        {/* ⭐ Sticky Airbnb Search (CLEAN VERSION) */}
-        <div className="sticky top-[88px] z-40 px-4">
-          <AnimatedSearch
-            initialArea={filters.area || ""}
-            onSearch={handleQuickSearch}
-          />
-        </div>
+        {/* Open Graph */}
+        <meta property="og:title" content={fullTitle} />
+        <meta property="og:description" content={fullDesc} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`https://roomsafar.in${router.asPath}`} />
+        <meta property="og:image" content="https://roomsafar.in/og-rooms.png" />
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
-              Rooms in Pune
-            </h1>
-            <p className="text-slate-600 mt-2">
-              {loading ? (
-                <span className="inline-flex items-center gap-2">
-                  <FiRefreshCw className="animate-spin" /> Loading rooms...
-                </span>
-              ) : (
-                `Found ${totalResults.toLocaleString()} rooms`
-              )}
-            </p>
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={fullTitle} />
+        <meta name="twitter:description" content={fullDesc} />
+
+        {/* JSON-LD Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SearchResultsPage",
+              name: fullTitle,
+              description: fullDesc,
+              url: `https://roomsafar.in${router.asPath}`,
+              numberOfItems: totalResults,
+            }),
+          }}
+        />
+      </Head>
+
+      {/* ============================= */}
+      {/*            UI START            */}
+      {/* ============================= */}
+
+      <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
+        <Navbar />
+
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-20">
+          {/* Sticky Search */}
+          <div className="sticky top-[88px] z-40 px-4">
+            <AnimatedSearch
+              initialArea={filters.area || ""}
+              onSearch={handleQuickSearch}
+            />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => setFiltersOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-sm hover:shadow transition"
-            >
-              <FiFilter size={16} className="text-slate-600" />
-              Filters
-            </button>
-
-            <div className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-1">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-lg transition ${
-                  viewMode === "grid"
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <FiGrid size={20} />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-2 rounded-lg transition ${
-                  viewMode === "list"
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <FiList size={20} />
-              </button>
+          {/* Header */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+                Rooms{areaSEO} in Pune
+              </h1>
+              <p className="text-slate-600 mt-2">
+                {loading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <FiRefreshCw className="animate-spin" /> Loading rooms...
+                  </span>
+                ) : (
+                  `Found ${totalResults.toLocaleString()} rooms`
+                )}
+              </p>
             </div>
 
-            <select
-              value={sortBy}
-              onChange={handleSortChange}
-              className="px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-white"
-            >
-              {sortOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => setFiltersOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-sm hover:shadow transition"
+              >
+                <FiFilter size={16} className="text-slate-600" />
+                Filters
+              </button>
 
-        {/* Results */}
-        {loading && rooms.length === 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="bg-slate-200 rounded-2xl h-56 mb-4"></div>
-                <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+              <div className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-1">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 rounded-lg transition ${
+                    viewMode === "grid"
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <FiGrid size={20} />
+                </button>
+
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 rounded-lg transition ${
+                    viewMode === "list"
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <FiList size={20} />
+                </button>
+              </div>
+
+              <select
+                value={sortBy}
+                onChange={handleSortChange}
+                className="px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-white"
+              >
+                {sortOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Results */}
+          {loading && rooms.length === 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="bg-slate-200 rounded-2xl h-56 mb-4"></div>
+                  <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          ) : rooms.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
+              <div className="text-6xl mb-4">🏠</div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                No rooms found
+              </h3>
+              <button
+                onClick={() => fetchRooms({}, true)}
+                className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-xl"
+              >
+                Clear Filters
+              </button>
+            </div>
+          ) : (
+            <>
+              <div
+                className={`${
+                  viewMode === "grid"
+                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                    : "space-y-4"
+                }`}
+              >
+                {rooms.map((room) => (
+                  <RoomCard key={room.id} room={room} viewMode={viewMode} />
+                ))}
+              </div>
+
+              {hasMore && (
+                <div className="mt-12 text-center">
+                  <button
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="px-8 py-3.5 bg-white border-2 border-slate-200 rounded-xl font-medium hover:bg-slate-50 flex items-center justify-center gap-2"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <FiLoader className="animate-spin" /> Loading...
+                      </>
+                    ) : (
+                      "Load More"
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Stats */}
+          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { label: "Average Response", value: "2.4 hrs" },
+              { label: "Owner Verified", value: "98%" },
+              { label: "Satisfaction", value: "4.8/5" },
+              { label: "Instant Contact", value: "100%" },
+            ].map((stat, i) => (
+              <div key={i} className="bg-white p-6 rounded-2xl border text-center">
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <div className="text-sm text-slate-600">{stat.label}</div>
               </div>
             ))}
           </div>
-        ) : rooms.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
-            <div className="text-6xl mb-4">🏠</div>
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">
-              No rooms found
-            </h3>
-            <button
-              onClick={() => fetchRooms({}, true)}
-              className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-xl"
-            >
-              Clear Filters
-            </button>
-          </div>
-        ) : (
-          <>
-            <div
-              className={`${
-                viewMode === "grid"
-                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                  : "space-y-4"
-              }`}
-            >
-              {rooms.map((room) => (
-                <RoomCard key={room.id} room={room} viewMode={viewMode} />
-              ))}
-            </div>
+        </main>
 
-            {hasMore && (
-              <div className="mt-12 text-center">
-                <button
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className="px-8 py-3.5 bg-white border-2 border-slate-200 rounded-xl font-medium hover:bg-slate-50 flex items-center justify-center gap-2"
-                >
-                  {loadingMore ? (
-                    <>
-                      <FiLoader className="animate-spin" /> Loading...
-                    </>
-                  ) : (
-                    "Load More"
-                  )}
-                </button>
-              </div>
-            )}
-          </>
-        )}
+        <FilterModal
+          open={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
+          initialFilters={filters}
+          onApply={handleApplyFilters}
+        />
 
-        {/* Stats */}
-        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6">
-          {[
-            { label: "Average Response", value: "2.4 hrs" },
-            { label: "Owner Verified", value: "98%" },
-            { label: "Satisfaction", value: "4.8/5" },
-            { label: "Instant Contact", value: "100%" },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white p-6 rounded-2xl border text-center">
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="text-sm text-slate-600">{stat.label}</div>
-            </div>
-          ))}
-        </div>
-      </main>
-
-      <FilterModal
-        open={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-        initialFilters={filters}
-        onApply={handleApplyFilters}
-      />
-
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </>
   );
 }

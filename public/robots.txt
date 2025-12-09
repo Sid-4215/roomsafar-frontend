@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://roomsafar.com
+
+# Sitemaps
+Sitemap: https://roomsafar.com/sitemap.xml

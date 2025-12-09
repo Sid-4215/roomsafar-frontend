@@ -1,10 +1,14 @@
-import { useState, useContext, useEffect, useCallback, useMemo } from "react";
+// Components imports
+import { useState, useContext, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { AuthContext } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import { roomsAPI, uploadService } from "../services/api";
 import toast from "react-hot-toast";
 import imageCompression from "browser-image-compression";
+import Spinner from "../components/Spinner"; // ✅ Unified spinner
+
+// Icons
 import {
   FiUpload,
   FiTrash2,
@@ -49,31 +53,30 @@ export default function PostRoom() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [selectedFiles, setSelectedFiles] = useState([]);
-
   const [form, setForm] = useState(initialFormState);
 
-  /* ======================================================
+  /* ========================================
       REDIRECT IF NOT LOGGED IN
-  ====================================================== */
+  ======================================== */
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast.error("Please login to post a room");
       router.push("/?redirect=/post");
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated]);
 
-  /* ======================================================
-      AUTO-FILL WHATSAPP FIELD
-  ====================================================== */
+  /* ========================================
+      AUTO-FILL WHATSAPP
+  ======================================== */
   useEffect(() => {
     if (user?.phone) {
       setForm((prev) => ({ ...prev, whatsapp: user.phone }));
     }
   }, [user]);
 
-  /* ======================================================
-      FORM INPUT HANDLER
-  ====================================================== */
+  /* ========================================
+      INPUT HANDLER
+  ======================================== */
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
 
@@ -88,16 +91,16 @@ export default function PostRoom() {
     }
   }, []);
 
-  /* ======================================================
-      IMAGE SELECT + COMPRESSION
-  ====================================================== */
+  /* ========================================
+      SELECT IMAGES + COMPRESS
+  ======================================== */
   const handleImageSelect = useCallback(
     async (e) => {
       const files = Array.from(e.target.files || []);
       if (!files.length) return;
 
       if (files.length + selectedFiles.length > MAX_FILES) {
-        toast.error(`You can upload maximum ${MAX_FILES} images`);
+        toast.error(`You can upload max ${MAX_FILES} images`);
         return;
       }
 
@@ -106,7 +109,7 @@ export default function PostRoom() {
 
       for (const file of files) {
         if (file.size > maxSizeBytes) {
-          toast.error(`File ${file.name} exceeds ${MAX_ORIGINAL_SIZE_MB}MB`);
+          toast.error(`File ${file.name} is larger than ${MAX_ORIGINAL_SIZE_MB}MB`);
           continue;
         }
 
@@ -135,9 +138,9 @@ export default function PostRoom() {
     [selectedFiles.length]
   );
 
-  /* ======================================================
-      REMOVE SELECTED IMAGE
-  ====================================================== */
+  /* ========================================
+      REMOVE IMAGE
+  ======================================== */
   const removeImage = useCallback((index) => {
     setSelectedFiles((prev) => {
       const arr = [...prev];
@@ -156,21 +159,21 @@ export default function PostRoom() {
     });
 
     setUploadProgress((prev) => {
-      const cp = { ...prev };
-      delete cp[index];
-      return cp;
+      const copy = { ...prev };
+      delete copy[index];
+      return copy;
     });
   }, []);
 
-  /* ======================================================
-      CLOUDINARY UPLOAD
-  ====================================================== */
+  /* ========================================
+      UPLOAD TO CLOUDINARY
+  ======================================== */
   const uploadImages = useCallback(async () => {
     const CLOUD = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
     const PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
     if (!CLOUD || !PRESET) {
-      toast.error("Cloudinary not configured");
+      toast.error("Cloudinary missing configuration");
       return;
     }
 
@@ -179,7 +182,7 @@ export default function PostRoom() {
       .filter((f) => !f.uploadedUrl);
 
     if (!pending.length) {
-      toast.success("All photos already uploaded");
+      toast.success("All photos uploaded");
       return;
     }
 
@@ -191,19 +194,18 @@ export default function PostRoom() {
           fileObj.file,
           CLOUD,
           PRESET,
-          (pct) =>
-            setUploadProgress((prev) => ({ ...prev, [fileObj.index]: pct }))
+          (pct) => setUploadProgress((p) => ({ ...p, [fileObj.index]: pct }))
         );
 
         setSelectedFiles((prev) => {
-          const upd = [...prev];
-          upd[fileObj.index] = {
-            ...upd[fileObj.index],
+          const updated = [...prev];
+          updated[fileObj.index] = {
+            ...updated[fileObj.index],
             uploadedUrl: result.url,
             progress: 100,
             error: null,
           };
-          return upd;
+          return updated;
         });
 
         setForm((prev) => ({
@@ -215,9 +217,9 @@ export default function PostRoom() {
           await uploadSingle(fileObj, attempt + 1);
         } else {
           setSelectedFiles((prev) => {
-            const upd = [...prev];
-            upd[fileObj.index].error = "Upload failed";
-            return upd;
+            const updated = [...prev];
+            updated[fileObj.index].error = "Upload failed";
+            return updated;
           });
         }
       }
@@ -226,7 +228,7 @@ export default function PostRoom() {
     try {
       for (let i = 0; i < pending.length; i += MAX_PARALLEL_UPLOADS) {
         const chunk = pending.slice(i, i + MAX_PARALLEL_UPLOADS);
-        await Promise.all(chunk.map((f) => uploadSingle(f)));
+        await Promise.all(chunk.map(uploadSingle));
       }
 
       toast.success("Upload complete");
@@ -235,76 +237,70 @@ export default function PostRoom() {
     }
   }, [selectedFiles]);
 
-  /* ======================================================
+  /* ========================================
       VALIDATION
-  ====================================================== */
+  ======================================== */
   const validateForm = useCallback(() => {
     const errors = [];
 
     if (!form.rent || +form.rent < 1000) errors.push("Rent must be at least ₹1000");
-    if (!form.deposit || +form.deposit < 0) errors.push("Deposit must be positive");
-    if (!form.type) errors.push("Select a room type");
-    if (!form.furnished) errors.push("Select furnishing status");
-    if (!form.gender) errors.push("Select preferred gender");
-
-    if (!form.whatsapp || form.whatsapp.length !== 10)
-      errors.push("Invalid WhatsApp number");
-
-    if (!form.address.line1) errors.push("Enter full address");
+    if (!formdeposit < 0) errors.push("Deposit must be valid");
+    if (!form.type) errors.push("Select room type");
+    if (!form.furnished) errors.push("Select furnishing");
+    if (!form.gender) errors.push("Select gender");
+    if (!/^\d{10}$/.test(form.whatsapp)) errors.push("Invalid WhatsApp number");
+    if (!form.address.line1) errors.push("Enter address");
     if (!form.address.area) errors.push("Enter locality");
-    if (!/^\d{6}$/.test(form.address.pincode))
-      errors.push("Invalid 6-digit pincode");
-
+    if (!/^\d{6}$/.test(form.address.pincode)) errors.push("Invalid pincode");
     if (form.imageUrls.length < 1)
-      errors.push("Upload at least one image and click 'Upload Photos'");
+      errors.push("Upload at least 1 image and click Upload Photos");
 
-    errors.forEach((e) => toast.error(e));
+    errors.forEach(toast.error);
+
     return errors.length === 0;
   }, [form]);
 
-  /* ======================================================
-      SUBMIT FORM → CREATE ROOM
-  ====================================================== */
-  const handleSubmit = useCallback(
-    async (e) => {
-      e.preventDefault();
-      if (!validateForm()) return;
+  /* ========================================
+      SUBMIT FORM
+  ======================================== */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
 
-      setLoading(true);
+    setLoading(true);
 
-      try {
-        const body = {
-          ...form,
-          rent: +form.rent,
-          deposit: +form.deposit,
-        };
+    try {
+      const body = {
+        ...form,
+        rent: +form.rent,
+        deposit: +form.deposit,
+      };
 
-        const res = await roomsAPI.createRoom(body);
+      const res = await roomsAPI.createRoom(body);
 
-        toast.success("Room posted successfully!");
-        router.push(`/room/${res.id}`);
-      } catch (err) {
-        toast.error(err.message || "Failed to post room");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [form]
-  );
+      toast.success("Room posted successfully!");
+      router.push(`/room/${res.id}`);
+    } catch (err) {
+      toast.error(err.message || "Failed to post room");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  /* ======================================================
-      UI RENDER
-  ====================================================== */
+  /* ========================================
+      AUTH-LOADING SCREEN
+  ======================================== */
   if (authLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex justify-center items-center">
-        <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full"></div>
+        <Spinner size={48} /> {/* ✅ unified spinner */}
       </div>
     );
   }
 
-  const uploadedCount = selectedFiles.filter((f) => f.uploadedUrl).length;
-
+  /* ========================================
+      UI
+  ======================================== */
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
@@ -313,9 +309,9 @@ export default function PostRoom() {
         <h1 className="text-3xl font-bold mb-4">Post Your Room</h1>
 
         <form onSubmit={handleSubmit} className="space-y-10">
-          {/* ------------------------------------------------------ */}
-          {/* PHOTOS SECTION */}
-          {/* ------------------------------------------------------ */}
+          {/* ===================================================== */}
+          {/* PHOTOS */}
+          {/* ===================================================== */}
           <div className="bg-white p-6 rounded-2xl shadow border">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <FiCamera /> Photos
@@ -332,26 +328,23 @@ export default function PostRoom() {
               />
               <div className="p-8 border-2 border-dashed rounded-xl text-center">
                 <FiUpload size={32} className="mx-auto text-slate-400" />
-                <p>Click or drag & drop to upload</p>
-                <p className="text-xs text-slate-500">
-                  Max {MAX_FILES} files, auto-compressed
-                </p>
+                <p>Click or drag & drop</p>
+                <p className="text-xs text-slate-500">Max {MAX_FILES} files</p>
               </div>
             </label>
 
-            {/* Preview Grid */}
             {selectedFiles.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6">
                 {selectedFiles.map((f, i) => (
                   <div key={i} className="relative">
                     <img
                       src={f.previewUrl}
-                      alt="preview"
                       className="rounded-xl object-cover h-32 w-full"
                     />
 
                     {!f.uploadedUrl ? (
                       <div className="absolute inset-0 bg-black/60 text-white flex flex-col items-center justify-center">
+
                         {f.error ? (
                           <>
                             <p className="text-xs">{f.error}</p>
@@ -364,8 +357,10 @@ export default function PostRoom() {
                           </>
                         ) : (
                           <>
-                            <span>{uploadProgress[i] || 0}%</span>
-                            <div className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <Spinner size={24} /> {/* 🔵 unified spinner */}
+                            <span className="text-xs mt-1">
+                              {uploadProgress[i] || 0}%
+                            </span>
                           </>
                         )}
                       </div>
@@ -397,9 +392,9 @@ export default function PostRoom() {
             </button>
           </div>
 
-          {/* ------------------------------------------------------ */}
+          {/* ===================================================== */}
           {/* PRICING */}
-          {/* ------------------------------------------------------ */}
+          {/* ===================================================== */}
           <div className="bg-white p-6 rounded-2xl shadow border">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <FiDollarSign /> Pricing
@@ -426,9 +421,9 @@ export default function PostRoom() {
             </div>
           </div>
 
-          {/* ------------------------------------------------------ */}
+          {/* ===================================================== */}
           {/* ROOM DETAILS */}
-          {/* ------------------------------------------------------ */}
+          {/* ===================================================== */}
           <div className="bg-white p-6 rounded-2xl shadow border">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <FiHome /> Room Details
@@ -457,7 +452,7 @@ export default function PostRoom() {
               >
                 <option value="">Furnishing</option>
                 <option value="FURNISHED">Fully Furnished</option>
-                <option value="SEMI_FURNISHED">Semi-furnished</option>
+                <option value="SEMI_FURNISHED">Semi-Furnished</option>
                 <option value="UNFURNISHED">Unfurnished</option>
               </select>
 
@@ -475,9 +470,9 @@ export default function PostRoom() {
             </div>
           </div>
 
-          {/* ------------------------------------------------------ */}
+          {/* ===================================================== */}
           {/* ADDRESS */}
-          {/* ------------------------------------------------------ */}
+          {/* ===================================================== */}
           <div className="bg-white p-6 rounded-2xl shadow border">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <FiMapPin /> Address
@@ -503,31 +498,31 @@ export default function PostRoom() {
               <input
                 name="address.city"
                 value={form.address.city}
-                className="border px-4 py-3 rounded-lg"
                 readOnly
+                className="border px-4 py-3 rounded-lg"
               />
 
               <input
                 name="address.state"
                 value={form.address.state}
-                className="border px-4 py-3 rounded-lg"
                 readOnly
+                className="border px-4 py-3 rounded-lg"
               />
             </div>
 
             <input
               name="address.pincode"
               placeholder="Pincode"
+              maxLength="6"
               value={form.address.pincode}
               onChange={handleInputChange}
-              maxLength="6"
               className="border px-4 py-3 rounded-lg w-full mt-4"
             />
           </div>
 
-          {/* ------------------------------------------------------ */}
+          {/* ===================================================== */}
           {/* CONTACT + DESCRIPTION */}
-          {/* ------------------------------------------------------ */}
+          {/* ===================================================== */}
           <div className="bg-white p-6 rounded-2xl shadow border">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <FiMessageSquare /> Contact & Description
@@ -541,9 +536,9 @@ export default function PostRoom() {
                 type="text"
                 name="whatsapp"
                 value={form.whatsapp}
+                maxLength="10"
                 onChange={handleInputChange}
                 placeholder="Whatsapp number"
-                maxLength="10"
                 className="border px-4 py-3 rounded-r-lg flex-1"
               />
             </div>
@@ -558,9 +553,9 @@ export default function PostRoom() {
             />
           </div>
 
-          {/* ------------------------------------------------------ */}
+          {/* ===================================================== */}
           {/* SUBMIT */}
-          {/* ------------------------------------------------------ */}
+          {/* ===================================================== */}
           <button
             type="submit"
             disabled={loading || uploading}

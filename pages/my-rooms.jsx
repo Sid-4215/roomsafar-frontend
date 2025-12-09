@@ -8,11 +8,10 @@ import {
   FiTrash2,
   FiHome,
   FiMapPin,
-  FiLoader,
-  FiPlus,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { useRouter } from "next/router";
+import Spinner from "../components/Spinner";   // ✅ ADD THIS
 
 export default function MyRooms() {
   const { isAuthenticated, loading: authLoading } = useContext(AuthContext);
@@ -20,7 +19,6 @@ export default function MyRooms() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  /* Redirect if not logged in */
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast.error("Please login to view your listings");
@@ -28,7 +26,6 @@ export default function MyRooms() {
     }
   }, [authLoading, isAuthenticated]);
 
-  /* Load my rooms */
   useEffect(() => {
     if (isAuthenticated) fetchMyRooms();
   }, [isAuthenticated]);
@@ -62,7 +59,7 @@ export default function MyRooms() {
       <div className="min-h-screen bg-slate-50">
         <Navbar />
         <div className="flex justify-center items-center h-[70vh]">
-          <FiLoader className="animate-spin text-slate-600" size={36} />
+          <Spinner size={48} />  {/* ✅ unified spinner */}
         </div>
       </div>
     );
@@ -83,22 +80,13 @@ export default function MyRooms() {
       <Navbar />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 pb-24">
-        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-slate-900">My Listings</h1>
-
-          <a
-            href="/post"
-            className="px-5 py-3 bg-blue-600 text-white rounded-xl font-medium flex items-center gap-2 hover:bg-blue-700 transition"
-          >
-            <FiPlus /> Post New Listing
-          </a>
         </div>
 
-        {/* Loading */}
         {loading ? (
           <div className="flex justify-center py-20">
-            <FiLoader className="animate-spin text-slate-600" size={32} />
+            <Spinner size={40} /> {/* 🔵 unified spinner */}
           </div>
         ) : rooms.length === 0 ? (
           <div className="text-center py-24">
@@ -109,6 +97,7 @@ export default function MyRooms() {
             <p className="text-slate-500 mt-2 mb-6">
               You have not posted any rooms yet.
             </p>
+
             <a
               href="/post"
               className="px-5 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition"
@@ -117,7 +106,6 @@ export default function MyRooms() {
             </a>
           </div>
         ) : (
-          /* Room Cards */
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {rooms.map((room) => {
               const area = room.address?.area || "Unknown Area";

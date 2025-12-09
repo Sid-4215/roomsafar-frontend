@@ -23,7 +23,7 @@ export default function Navbar() {
   const navItems = [
     { label: "Home", href: "/" },
     { label: "Find Rooms", href: "/rooms" },
-    { label: "Find Roommate", href: "/roommate" },
+    { label: "Find Roommate", href: "/roommate" }, // NEW PAGE
     { label: "Post Listing", href: "/post" },
   ];
 
@@ -68,7 +68,7 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* RIGHT SIDE – LOGIN / USER */}
+          {/* RIGHT SIDE */}
           <div className="hidden md:flex items-center gap-4 relative">
 
             {/* Not Logged In */}
@@ -81,10 +81,9 @@ export default function Navbar() {
               </button>
             )}
 
-            {/* Logged-in User Avatar */}
+            {/* Logged-In User */}
             {user && (
               <div className="relative">
-                {/* Avatar Button */}
                 <button
                   onClick={() => setDropdown(!dropdown)}
                   className="h-11 w-11 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-semibold text-lg shadow cursor-pointer hover:opacity-90 transition"
@@ -92,24 +91,18 @@ export default function Navbar() {
                   {userInitial}
                 </button>
 
-                {/* Dropdown */}
                 {dropdown && (
-                  <div
-                    className="
-                      absolute right-0 mt-3 w-52 
-                      bg-white shadow-xl rounded-xl border border-slate-200 
-                      animate-[fadeIn_0.2s_ease-out]
-                    "
-                  >
-                    {/* User Info */}
+                  <div className="
+                    absolute right-0 mt-3 w-52 
+                    bg-white shadow-xl rounded-xl border border-slate-200 
+                    animate-[fadeIn_0.2s_ease-out]
+                  ">
                     <div className="px-4 py-3 border-b border-slate-100">
-                      <p className="font-semibold text-slate-900 text-sm">
-                        {user.name}
-                      </p>
+                      <p className="font-semibold text-slate-900 text-sm">{user.name}</p>
                       <p className="text-xs text-slate-500">{user.email}</p>
                     </div>
 
-                    {/* Menu Items */}
+                    {/* MENU OPTIONS */}
                     <div className="py-2">
                       <a
                         href="/my-rooms"
@@ -125,12 +118,7 @@ export default function Navbar() {
                         <FiPlus size={16} /> Post a Listing
                       </a>
 
-                      <a
-                        href="/profile"
-                        className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition"
-                      >
-                        <FiUser size={16} /> My Profile
-                      </a>
+                      {/* ❌ Removed My Profile option */}
 
                       <button
                         onClick={logout}
@@ -150,11 +138,7 @@ export default function Navbar() {
             onClick={() => setMobileMenu(!mobileMenu)}
             className="md:hidden p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition"
           >
-            {mobileMenu ? (
-              <FiX size={26} className="text-slate-700" />
-            ) : (
-              <FiMenu size={26} className="text-slate-700" />
-            )}
+            {mobileMenu ? <FiX size={26} /> : <FiMenu size={26} />}
           </button>
         </div>
 
@@ -162,6 +146,7 @@ export default function Navbar() {
         {mobileMenu && (
           <div className="md:hidden bg-white border-t border-slate-200 shadow-inner">
             <div className="px-4 py-3 space-y-1">
+
               {navItems.map((item) => (
                 <a
                   key={item.href}
@@ -190,7 +175,7 @@ export default function Navbar() {
                 </button>
               )}
 
-              {/* Mobile Logged In */}
+              {/* Mobile Logged-In */}
               {user && (
                 <>
                   <a
@@ -209,13 +194,7 @@ export default function Navbar() {
                     Post a Listing
                   </a>
 
-                  <a
-                    href="/profile"
-                    onClick={() => setMobileMenu(false)}
-                    className="block px-4 py-3 text-sm text-slate-700 rounded-xl hover:bg-slate-100"
-                  >
-                    My Profile
-                  </a>
+                  {/* ❌ Removed My Profile */}
 
                   <button
                     onClick={() => {

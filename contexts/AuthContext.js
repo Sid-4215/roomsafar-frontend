@@ -75,7 +75,7 @@ export default function AuthProvider({ children }) {
         LOGIN
   ====================================================== */
   const login = useCallback(
-    async (token, redirectTo = "/") => {
+    async (token, redirectTo = null) => {
       try {
         setToken(token);
         const userData = await fetchCurrentUser(token);
@@ -85,7 +85,11 @@ export default function AuthProvider({ children }) {
         setUser(userData);
         toast.success(`Welcome back, ${userData.name}!`);
 
-        router.push(redirectTo);
+        // ⭐ Only redirect if redirectTo is provided
+        if (redirectTo) {
+          router.replace(redirectTo);
+        }
+
         return userData;
       } catch (error) {
         console.error("Login error:", error);
@@ -95,6 +99,7 @@ export default function AuthProvider({ children }) {
     },
     [fetchCurrentUser, setToken, router]
   );
+
 
   /* ======================================================
         LOGOUT

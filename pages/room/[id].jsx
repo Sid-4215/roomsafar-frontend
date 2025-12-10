@@ -181,13 +181,13 @@ export default function RoomDetails() {
         <Navbar />
 
         <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-          {/* Back button */}
           <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6"
-          >
-            <FiChevronLeft size={20} /> Back
-          </button>
+          onClick={() => router.push("/rooms")}
+          className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6"
+        >
+          <FiChevronLeft size={20} /> Back to Rooms
+        </button>
+
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* LEFT SIDE – IMAGES */}

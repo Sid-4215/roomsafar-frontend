@@ -91,13 +91,32 @@ export default function Hero() {
             WhatsApp contact.
           </p>
 
-          {/* 🔍 The NEW Airbnb search with animation */}
+          {/* Search */}
           <div className="mt-4 mb-10">
             <AnimatedSearch onSearch={handleHeroSearch} />
           </div>
 
+          {/* ⭐ CTAs ADDED HERE */}
+          <div className="mt-8 flex justify-center gap-4">
+            <button
+              onClick={() => router.push("/rooms")}
+              className="px-6 py-3 rounded-xl bg-white/20 backdrop-blur-md text-white font-semibold 
+                        hover:bg-white/30 transition shadow-lg border border-white/30"
+            >
+              🔍 View Rooms
+            </button>
+
+            <button
+              onClick={() => router.push("/post")}
+              className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold 
+                        hover:bg-blue-700 transition shadow-lg"
+            >
+              🏠 Post Your Room
+            </button>
+          </div>
+
           {/* Features */}
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex flex-wrap justify-center gap-3 mt-8">
             {features.map((feature, idx) => (
               <div
                 key={idx}

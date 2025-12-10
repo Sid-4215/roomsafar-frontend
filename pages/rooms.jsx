@@ -29,14 +29,18 @@ export default function Rooms() {
   const [filters, setFilters] = useState({});
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  /* 🌟 Dynamic SEO text */
+  /* 🌟 SEO */
   const areaSEO = filters.area ? ` in ${filters.area}` : "";
   const title = `Rooms${areaSEO} in Pune | Roomsafar`;
   const desc = `Browse verified rooms${areaSEO} in Pune. No brokerage, real photos, direct owner contact. Filters for rent, gender, furnishing, and more.`;
 
+  /* 🚀 Fetch Rooms */
   const fetchRooms = useCallback(
-    async (newFilters = {}, reset = false, newPage = 0) => {
+    async (newFilters = {}, reset = false, newPage = 0, overrideSort) => {
       const currentFilters = { ...filters, ...newFilters };
+
+      // ⭐ use the latest sort value (override > state)
+      const activeSort = overrideSort || sortBy;
 
       if (reset) {
         setLoading(true);
@@ -45,11 +49,23 @@ export default function Rooms() {
         setLoadingMore(true);
       }
 
+      // ⭐ Sorting logic based on activeSort
+      let sortField = "createdAt";
+      let sortDirection = "desc"; // newest first
+
+      if (activeSort === "rent") {
+        sortField = "rent";
+        sortDirection = "asc"; // Low → High
+      } else if (activeSort === "rentDesc") {
+        sortField = "rent";
+        sortDirection = "desc"; // High → Low
+      }
+
       const params = {
         page: reset ? 0 : newPage,
         size: 20,
-        sortBy: sortBy === "rentDesc" ? "rent" : sortBy,
-        sortDir: sortBy === "rent" ? "asc" : "desc",
+        sortBy: sortField,
+        sortDir: sortDirection,
         ...currentFilters,
       };
 
@@ -71,9 +87,11 @@ export default function Rooms() {
           total = data.totalElements || 0;
         }
 
-        reset || newPage === 0
-          ? setRooms(roomsArray)
-          : setRooms((prev) => [...prev, ...roomsArray]);
+        if (reset || newPage === 0) {
+          setRooms(roomsArray);
+        } else {
+          setRooms((prev) => [...prev, ...roomsArray]);
+        }
 
         setTotalResults(total);
         setHasMore(roomsArray.length === 20);
@@ -81,7 +99,6 @@ export default function Rooms() {
 
         const queryParams = new URLSearchParams();
         Object.entries(currentFilters).forEach(([k, v]) => v && queryParams.set(k, v));
-
         window.history.replaceState({}, "", `/rooms?${queryParams.toString()}`);
       } catch (error) {
         console.error(error);
@@ -97,6 +114,7 @@ export default function Rooms() {
     [filters, sortBy]
   );
 
+  /* Load filters from URL on mount */
   useEffect(() => {
     const params = Object.fromEntries(new URLSearchParams(window.location.search));
     const processed = {};
@@ -108,7 +126,7 @@ export default function Rooms() {
 
     setFilters(processed);
     fetchRooms(processed, true);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleQuickSearch = (area) => {
     fetchRooms({ ...filters, area }, true);
@@ -126,20 +144,21 @@ export default function Rooms() {
     }
   };
 
+  // ⭐ Fix: use newSort immediately instead of stale sortBy
   const handleSortChange = (e) => {
-    setSortBy(e.target.value);
-    fetchRooms({}, true);
+    const newSort = e.target.value;
+    setSortBy(newSort);
+    fetchRooms({}, true, 0, newSort); // pass overrideSort
   };
 
   const sortOptions = [
     { value: "createdAt", label: "Newest First" },
     { value: "rent", label: "Price: Low to High" },
     { value: "rentDesc", label: "Price: High to Low" },
-    { value: "area", label: "Area" },
   ];
 
   return (
-     <>
+    <>
       {/* SEO */}
       <SEO
         title={title}
@@ -161,15 +180,10 @@ export default function Rooms() {
         }}
       />
 
-      {/* ============================= */}
-      {/*            UI START            */}
-      {/* ============================= */}
-
       <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
         <Navbar />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-20">
-          {/* Sticky Search */}
           <div className="sticky top-[88px] z-40 px-4">
             <AnimatedSearch
               initialArea={filters.area || ""}
@@ -203,6 +217,7 @@ export default function Rooms() {
                 Filters
               </button>
 
+              {/* Grid/List Toggle */}
               <div className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-1">
                 <button
                   onClick={() => setViewMode("grid")}
@@ -227,6 +242,7 @@ export default function Rooms() {
                 </button>
               </div>
 
+              {/* Sort Dropdown */}
               <select
                 value={sortBy}
                 onChange={handleSortChange}

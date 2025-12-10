@@ -474,6 +474,7 @@ export default function PostRoom() {
                   <option value="RK">1 RK</option>
                   <option value="BHK1">1 BHK</option>
                   <option value="BHK2">2 BHK</option>
+                  <option value="BHK3">3 BHK</option>
                   <option value="SHARED">Shared Room</option>
                   <option value="PG">PG</option>
                 </select>

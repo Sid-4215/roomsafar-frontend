@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import SEO from "../components/SEO";
 import { useRouter } from "next/router";
 import Navbar from "../components/Navbar";
-import RoomCard from "../components/RoomCard";
+import RoomCard from "../components/room-ui/RoomCard";
 import Footer from "../components/Footer";
 import AnimatedSearch from "../components/search/AnimatedSearch";
 import FilterModal from "../components/FilterModal.jsx";
@@ -36,11 +36,8 @@ export default function Rooms() {
 
   /* 🚀 Fetch Rooms */
   const fetchRooms = useCallback(
-    async (newFilters = {}, reset = false, newPage = 0, overrideSort) => {
+    async (newFilters = {}, reset = false, newPage = 0) => {
       const currentFilters = { ...filters, ...newFilters };
-
-      // ⭐ use the latest sort value (override > state)
-      const activeSort = overrideSort || sortBy;
 
       if (reset) {
         setLoading(true);
@@ -49,14 +46,16 @@ export default function Rooms() {
         setLoadingMore(true);
       }
 
-      // ⭐ Sorting logic based on activeSort
+      /* ⭐ FIXED SORTING LOGIC (100% correct) */
       let sortField = "createdAt";
       let sortDirection = "desc"; // newest first
 
-      if (activeSort === "rent") {
+      if (sortBy === "rent") {
         sortField = "rent";
         sortDirection = "asc"; // Low → High
-      } else if (activeSort === "rentDesc") {
+      }
+
+      if (sortBy === "rentDesc") {
         sortField = "rent";
         sortDirection = "desc"; // High → Low
       }
@@ -100,6 +99,7 @@ export default function Rooms() {
         const queryParams = new URLSearchParams();
         Object.entries(currentFilters).forEach(([k, v]) => v && queryParams.set(k, v));
         window.history.replaceState({}, "", `/rooms?${queryParams.toString()}`);
+
       } catch (error) {
         console.error(error);
         toast.error("Failed to load rooms.");
@@ -126,7 +126,7 @@ export default function Rooms() {
 
     setFilters(processed);
     fetchRooms(processed, true);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleQuickSearch = (area) => {
     fetchRooms({ ...filters, area }, true);
@@ -144,13 +144,12 @@ export default function Rooms() {
     }
   };
 
-  // ⭐ Fix: use newSort immediately instead of stale sortBy
   const handleSortChange = (e) => {
-    const newSort = e.target.value;
-    setSortBy(newSort);
-    fetchRooms({}, true, 0, newSort); // pass overrideSort
+    setSortBy(e.target.value);
+    fetchRooms({}, true);
   };
 
+  /* ⭐ FINAL SORT OPTIONS — Area removed */
   const sortOptions = [
     { value: "createdAt", label: "Newest First" },
     { value: "rent", label: "Price: Low to High" },

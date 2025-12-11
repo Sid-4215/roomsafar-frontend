@@ -8,9 +8,7 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-/* ==========================================
-   REQUEST INTERCEPTOR → TOKEN + USER ID
-========================================== */
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
@@ -21,7 +19,6 @@ api.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      // ⭐ Add logged-in User ID to every request
       if (user) {
         try {
           const userObj = JSON.parse(user);
@@ -37,9 +34,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-/* ==========================================
-   RESPONSE INTERCEPTOR
-========================================== */
+// Response interceptor
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
@@ -59,9 +54,6 @@ api.interceptors.response.use(
   }
 );
 
-/* ==========================================
-   =============== AUTH API =================
-========================================== */
 export const authAPI = {
   login: (email, password) => api.post("/auth/login", { email, password }),
   register: (name, email, password) => api.post("/auth/register", { name, email, password }),
@@ -69,9 +61,6 @@ export const authAPI = {
   getCurrentUser: () => api.get("/auth/me"),
 };
 
-/* ==========================================
-   =============== ROOMS API ================
-========================================== */
 export const roomsAPI = {
   getAllRooms: (params = {}) =>
     api.get("/api/rooms", { params }),
@@ -101,9 +90,6 @@ export const roomsAPI = {
     api.get("/api/rooms/my-rooms", { params: { page, size } }),
 };
 
-/* ==========================================
-   CLOUDINARY UPLOAD SERVICE
-========================================== */
 export const uploadService = {
   uploadToCloudinary: (file, cloudName, uploadPreset, onProgress) =>
     new Promise((resolve, reject) => {
@@ -116,7 +102,6 @@ export const uploadService = {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", url);
 
-      // Progress
       xhr.upload.addEventListener("progress", (e) => {
         if (e.lengthComputable && onProgress) {
           onProgress(Math.round((e.loaded / e.total) * 100));

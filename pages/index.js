@@ -3,7 +3,7 @@ import SEO from "../components/SEO";
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
 import Footer from "../components/Footer";
-import RoomCard from "../components/RoomCard";
+import RoomCard from "../components/room-ui/RoomCard";
 import { roomsAPI } from "../services/api";
 import toast from "react-hot-toast";
 

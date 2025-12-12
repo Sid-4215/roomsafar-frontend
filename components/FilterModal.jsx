@@ -1,10 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { FiX, FiMapPin, FiHome, FiUsers, FiDollarSign, FiCalendar } from "react-icons/fi";
-import { DateRange } from "react-date-range";
-import "react-date-range/dist/styles.css";
-import "react-date-range/dist/theme/default.css";
+
+// Dynamically load DateRange for client only
+const DateRange = dynamic(
+  () => import("react-date-range").then((mod) => mod.DateRange),
+  { ssr: false }
+);
+
+// Load CSS only on client
+if (typeof window !== "undefined") {
+  import("react-date-range/dist/styles.css");
+  import("react-date-range/dist/theme/default.css");
+}
 
 const DEFAULT_FILTERS = {
   area: "",
@@ -24,7 +34,7 @@ export default function FilterModal({
 }) {
   const [local, setLocal] = useState({ ...DEFAULT_FILTERS });
   const [showCalendar, setShowCalendar] = useState(false);
-  const [calendarMode, setCalendarMode] = useState("single"); // single | range
+  const [calendarMode, setCalendarMode] = useState("single");
 
   const [range, setRange] = useState([
     {
@@ -36,11 +46,10 @@ export default function FilterModal({
 
   useEffect(() => {
     if (open) {
-      setLocal((prev) => ({
-        ...prev,
+      setLocal({
         ...DEFAULT_FILTERS,
         ...initialFilters,
-      }));
+      });
     }
   }, [open, initialFilters]);
 
@@ -82,17 +91,8 @@ export default function FilterModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl p-6 sm:p-8 relative">
 
-      <div
-        className="
-          w-full max-w-3xl
-          bg-white rounded-3xl
-          shadow-2xl
-          p-6 sm:p-8
-          animate-fadeIn
-          relative
-        "
-      >
         {/* Calendar Popup */}
         {showCalendar && (
           <div className="absolute z-50 top-20 right-6 bg-white shadow-xl p-4 rounded-xl border">
@@ -107,7 +107,6 @@ export default function FilterModal({
                     key: "selection",
                   },
                 ]}
-                showSelectionPreview={false}
                 months={1}
                 direction="horizontal"
               />
@@ -163,12 +162,10 @@ export default function FilterModal({
 
         {/* Room Type & Gender */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
               <FiHome className="text-slate-400" /> Room type
             </label>
-
             <select
               value={local.type}
               onChange={(e) => update("type", e.target.value)}
@@ -201,7 +198,7 @@ export default function FilterModal({
           </div>
         </div>
 
-        {/* Max Rent */}
+        {/* Rent Slider */}
         <div className="space-y-3 mb-6">
           <div className="flex justify-between">
             <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -221,14 +218,13 @@ export default function FilterModal({
           />
         </div>
 
-        {/* DATE FILTERS */}
+        {/* Dates */}
         <div className="space-y-4 mb-6">
           <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
             <FiCalendar /> Date Filter
           </label>
 
           <div className="flex flex-col gap-3">
-
             <button
               className="px-4 py-3 rounded-xl border border-slate-200 flex justify-between"
               onClick={() => {
@@ -251,7 +247,6 @@ export default function FilterModal({
                 ? `${local.startDate} → ${local.endDate}`
                 : "Select range"}
             </button>
-
           </div>
         </div>
 
@@ -271,6 +266,7 @@ export default function FilterModal({
             Apply Filters
           </button>
         </div>
+
       </div>
     </div>
   );

@@ -77,6 +77,29 @@ export default function SectionGallery({ roomId }) {
     toast.success("Link copied!");
   };
 
+  const formatRoomType = (type) => {
+  if (!type) return "Room";
+
+  type = type.toUpperCase().replace(/[^A-Z0-9]/g, ""); 
+  // Cleans: "BHK3." → "BHK3"
+
+  const bhkMatch = type.match(/BHK(\d+)/);
+  if (bhkMatch) return `${bhkMatch[1]}BHK`;
+
+  const rkMatch = type.match(/RK(\d+)/);
+  if (rkMatch) return `${rkMatch[1]} RK`;
+
+  if (type === "SHARED") return "Shared Room";
+  if (type === "PG") return "PG";
+
+  // fallback
+  return type
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+
   return (
     <div className="min-h-screen bg-white">
       {/* TOP NAV */}
@@ -98,7 +121,8 @@ export default function SectionGallery({ roomId }) {
 
       {/* HEADER */}
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <h1 className="text-3xl font-semibold">Photos — {room.type}</h1>
+          <h1 className="text-3xl font-semibold">Photos — {formatRoomType(room.type)}</h1>
+
         <p className="text-gray-600">
           {room.address?.area}, {room.address?.city}
         </p>

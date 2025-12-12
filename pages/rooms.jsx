@@ -29,7 +29,6 @@ export default function Rooms() {
   const [filters, setFilters] = useState({});
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  /* 🌟 SEO */
   const areaSEO = filters.area ? ` in ${filters.area}` : "";
   const title = `Rooms${areaSEO} in Pune | Roomsafar`;
   const desc = `Browse verified rooms${areaSEO} in Pune. No brokerage, real photos, direct owner contact. Filters for rent, gender, furnishing, and more.`;
@@ -46,18 +45,18 @@ export default function Rooms() {
         setLoadingMore(true);
       }
 
-      /* ⭐ FIXED SORTING LOGIC (100% correct) */
+      /* ⭐ Correct Sorting */
       let sortField = "createdAt";
-      let sortDirection = "desc"; // newest first
+      let sortDirection = "desc";
 
       if (sortBy === "rent") {
         sortField = "rent";
-        sortDirection = "asc"; // Low → High
+        sortDirection = "asc";
       }
 
       if (sortBy === "rentDesc") {
         sortField = "rent";
-        sortDirection = "desc"; // High → Low
+        sortDirection = "desc";
       }
 
       const params = {
@@ -78,10 +77,7 @@ export default function Rooms() {
         let roomsArray = [];
         let total = 0;
 
-        if (Array.isArray(data)) {
-          roomsArray = data;
-          total = data.length;
-        } else if (data?.content) {
+        if (data?.content) {
           roomsArray = data.content;
           total = data.totalElements || 0;
         }
@@ -114,7 +110,7 @@ export default function Rooms() {
     [filters, sortBy]
   );
 
-  /* Load filters from URL on mount */
+  /* Load filters from URL */
   useEffect(() => {
     const params = Object.fromEntries(new URLSearchParams(window.location.search));
     const processed = {};
@@ -127,6 +123,11 @@ export default function Rooms() {
     setFilters(processed);
     fetchRooms(processed, true);
   }, []);
+
+  /* ⭐ SORT CHANGE FIX — Dedicated Effect */
+  useEffect(() => {
+    fetchRooms({}, true);
+  }, [sortBy]);
 
   const handleQuickSearch = (area) => {
     fetchRooms({ ...filters, area }, true);
@@ -146,10 +147,8 @@ export default function Rooms() {
 
   const handleSortChange = (e) => {
     setSortBy(e.target.value);
-    fetchRooms({}, true);
   };
 
-  /* ⭐ FINAL SORT OPTIONS — Area removed */
   const sortOptions = [
     { value: "createdAt", label: "Newest First" },
     { value: "rent", label: "Price: Low to High" },
@@ -158,25 +157,10 @@ export default function Rooms() {
 
   return (
     <>
-      {/* SEO */}
       <SEO
         title={title}
         description={desc}
         url={`https://roomsafar.com${router.asPath}`}
-      />
-
-      {/* JSON-LD */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SearchResultsPage",
-            name: title,
-            url: `https://roomsafar.com${router.asPath}`,
-            numberOfItems: totalResults,
-          }),
-        }}
       />
 
       <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
@@ -216,7 +200,6 @@ export default function Rooms() {
                 Filters
               </button>
 
-              {/* Grid/List Toggle */}
               <div className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-1">
                 <button
                   onClick={() => setViewMode("grid")}
@@ -241,7 +224,6 @@ export default function Rooms() {
                 </button>
               </div>
 
-              {/* Sort Dropdown */}
               <select
                 value={sortBy}
                 onChange={handleSortChange}

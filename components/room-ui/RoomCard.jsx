@@ -20,6 +20,22 @@ export default function RoomCard({ room }) {
   const formatINR = (n) =>
     typeof n === "number" ? `₹${n.toLocaleString("en-IN")}` : "₹—";
 
+  // 👉 Add this function to format room type (BHK2 → 2BHK, RK → 1RK)
+  const formatRoomType = (type) => {
+    if (!type) return "Room";
+
+    if (type.startsWith("BHK")) {
+      const num = type.replace("BHK", "");
+      return `${num}BHK`;
+    }
+
+    if (type === "RK") {
+      return "1RK";
+    }
+
+    return type;
+  };
+
   return (
     <div
       onClick={() => router.push(`/room/${room.id}`)}
@@ -65,7 +81,7 @@ export default function RoomCard({ room }) {
             bg-purple-600/90 text-white rounded-full
             shadow-lg
           ">
-            {room.type || "Room"}
+            {formatRoomType(room.type)}
           </span>
         </div>
 
@@ -96,10 +112,6 @@ export default function RoomCard({ room }) {
 
       {/* CONTENT */}
       <div className="p-5 pb-6">
-        {/* <h3 className="text-xl font-semibold text-slate-900 leading-tight line-clamp-1">
-          {room.title || "Beautiful Room"}
-        </h3> */}
-
         <div className="flex items-center gap-2 text-slate-600 text-sm mt-1">
           <FiMapPin size={14} className="text-purple-600" />
           {area}, {city}

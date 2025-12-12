@@ -83,6 +83,29 @@ export default function SectionGallery({ roomId }) {
     }));
   };
 
+  const formatRoomType = (type) => {
+  if (!type) return "Room";
+
+  type = type.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+  // BHK → 1BHK, 2BHK, 3BHK
+  const bhk = type.match(/BHK(\d+)/);
+  if (bhk) return `${bhk[1]} BHK`;
+
+  // RK → 1 RK, 2 RK
+  const rk = type.match(/RK(\d+)/);
+  if (rk) return `${rk[1]} RK`;
+
+  if (type === "SHARED") return "Shared Room";
+  if (type === "PG") return "PG / Hostel";
+
+  return type
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+
   return (
     <div className="min-h-screen bg-white">
       {/* TOP NAV */}
@@ -101,7 +124,7 @@ export default function SectionGallery({ roomId }) {
 
       {/* HEADER */}
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <h1 className="text-3xl font-semibold">Photos — {room.type}</h1>
+        <h1 className="text-3xl font-semibold">Photos — {formatRoomType(room.type)}</h1>
         <p className="text-gray-600">
           {room.address?.area}, {room.address?.city}
         </p>

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import {
   FiMapPin,
   FiHome,
@@ -11,8 +11,17 @@ import {
   FiDroplet,
   FiTv,
   FiWifi,
-  FiZoomIn,
   FiMaximize2,
+  FiMessageCircle,
+  FiCheck,
+  FiCalendar,
+  FiUser,
+  FiInfo,
+  FiExternalLink,
+  FiX,
+  FiPhone,
+  FiBook,
+  FiCoffee,
 } from "react-icons/fi";
 
 import {
@@ -23,11 +32,24 @@ import {
   MdOutlineNoFood,
   MdOutlineLiquor,
   MdSecurity,
+  MdVerified,
+  MdCall,
+  MdOutlineHouse,
+  MdOutlineWater,
+  MdOutlineLibraryBooks,
+  MdOutlineLocalLaundryService,
+  MdFitnessCenter,
+  MdRestaurant,
 } from "react-icons/md";
 
-import { GiWashingMachine } from "react-icons/gi";
+import { GiWashingMachine, GiBookshelf, GiWeightLiftingUp } from "react-icons/gi";
 import { TbAirConditioning, TbMicrowave, TbTable } from "react-icons/tb";
-import { FaCctv, FaRegSnowflake } from "react-icons/fa";
+import { FaCctv, FaRegSnowflake, FaWhatsapp, FaShieldAlt } from "react-icons/fa";
+import { BsLightningCharge, BsThreeDots } from "react-icons/bs";
+import { IoWaterOutline, IoCallOutline, IoSpeedometer } from "react-icons/io5";
+import { LuArmchair, LuFlame } from "react-icons/lu";
+import { BiWater } from "react-icons/bi";
+import { Ri24HoursLine, RiWifiLine } from "react-icons/ri";
 
 import { useRouter } from "next/navigation";
 
@@ -41,181 +63,899 @@ export default function RoomDetailsUI({
   handleShare = () => {},
 }) {
   const router = useRouter();
-  const address = room?.address || {};
-  const safeImages = images.length ? images : ["/no-image.jpg"];
-  const imageContainerRef = useRef(null);
+  const touchAreaRef = useRef(null);
+  const detailsRef = useRef(null);
+  
+  // Extract address from room object
+  const address = room?.address || {
+    line1: room?.line1 || "",
+    area: room?.area || "",
+    city: room?.city || "",
+    state: room?.state || "",
+    pincode: room?.pincode || "",
+  };
+  
+  // Extract images from room object if not provided as prop
+  const roomImages = images.length > 0 ? images : room?.images || [];
+  
+  // Transform image objects to URLs array
+  const imageUrls = useMemo(() => {
+    if (!roomImages || roomImages.length === 0) return ["/no-image.jpg"];
+    
+    if (typeof roomImages[0] === 'string') {
+      return roomImages;
+    }
+    
+    if (roomImages[0]?.url) {
+      return roomImages.map(img => img.url);
+    }
+    
+    return ["/no-image.jpg"];
+  }, [roomImages]);
 
-  /** -------------------------------------
-   *  IMPROVED IMAGE GALLERY STATE
-   * ------------------------------------- */
+  // States
   const [localIndex, setLocalIndex] = useState(currentImageIndex || 0);
   const [touchStartX, setTouchStartX] = useState(null);
-  const [touchEndX, setTouchEndX] = useState(null);
   const [imageLoaded, setImageLoaded] = useState({});
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [liked, setLiked] = useState(isFavorite);
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
+  const [showContactSheet, setShowContactSheet] = useState(false);
 
-  /** -------------------------------------
-   *  IMPROVED TOUCH HANDLING
-   * ------------------------------------- */
-  const onTouchStart = (e) => {
+  // Touch handlers
+  const handleTouchStart = useCallback((e) => {
+    if (!e.touches?.length) return;
     setTouchStartX(e.touches[0].clientX);
-  };
+  }, []);
 
-  const onTouchMove = (e) => {
-    setTouchEndX(e.touches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStartX || !touchEndX) return;
-
+  const handleTouchEnd = useCallback((e) => {
+    if (touchStartX == null) return;
+    
+    if (!e.changedTouches?.length) return;
+    const touchEndX = e.changedTouches[0].clientX;
     const diff = touchStartX - touchEndX;
-    const swipeThreshold = 60;
-
+    const swipeThreshold = 30;
+    
     if (Math.abs(diff) > swipeThreshold) {
       if (diff > 0) {
-        // Swipe left - next image
-        setLocalIndex((i) => (i + 1) % safeImages.length);
+        const next = (localIndex + 1) % imageUrls.length;
+        setLocalIndex(next);
+        setCurrentImageIndex(next);
       } else {
-        // Swipe right - previous image
-        setLocalIndex((i) => (i === 0 ? safeImages.length - 1 : i - 1));
+        const prev = localIndex === 0 ? imageUrls.length - 1 : localIndex - 1;
+        setLocalIndex(prev);
+        setCurrentImageIndex(prev);
       }
     }
-
     setTouchStartX(null);
-    setTouchEndX(null);
-  };
+  }, [touchStartX, localIndex, imageUrls.length, setCurrentImageIndex]);
 
-  /** -------------------------------------
-   *  KEYBOARD NAVIGATION
-   * ------------------------------------- */
+  // Sync with external index
   useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === "ArrowRight") {
-        setLocalIndex((i) => (i + 1) % safeImages.length);
-      } else if (e.key === "ArrowLeft") {
-        setLocalIndex((i) => (i === 0 ? safeImages.length - 1 : i - 1));
-      } else if (e.key === "Escape" && isFullscreen) {
-        setIsFullscreen(false);
-      }
-    };
+    setLocalIndex(currentImageIndex || 0);
+  }, [currentImageIndex]);
 
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [safeImages.length, isFullscreen]);
-
-  /** -------------------------------------
-   *  IMAGE LOADING HANDLER
-   * ------------------------------------- */
+  // Image load handler
   const handleImageLoad = (index) => {
-    setImageLoaded(prev => ({ ...prev, [index]: true }));
+    setImageLoaded((prev) => ({ ...prev, [index]: true }));
   };
 
-  /** -------------------------------------
-   *  AMENITY ICON MAP
-   * ------------------------------------- */
+  // Amenity icon mapping
   const getAmenityIcon = (key) => {
-    const map = {
-      wifi: FiWifi,
-      ac: TbAirConditioning,
-      geyser: FiDroplet,
-      washing_machine: GiWashingMachine,
-      refrigerator: FaRegSnowflake,
-      microwave: TbMicrowave,
-      tv: FiTv,
-      cupboard: FiHome,
-      lift: MdOutlineElevator,
-      parking: MdOutlineLocalParking,
-      security: MdSecurity,
-      cctv: FaCctv,
-      housekeeping: FiHome,
-      attached_bathroom: FiHome,
-      balcony: MdDeck,
-      study_table: TbTable,
-      water_purifier: FiDroplet,
-      inverter: FiHome,
-      no_non_veg: MdOutlineNoFood,
-      no_smoking: MdOutlineSmokeFree,
-      no_alcohol: MdOutlineLiquor,
-      no_outsiders: MdSecurity,
+    const exactMap = {
+      "WIFI": FiWifi,
+      "AC": TbAirConditioning,
+      "GEYSER": LuFlame,
+      "WASHING_MACHINE": GiWashingMachine,
+      "REFRIGERATOR": FaRegSnowflake,
+      "MICROWAVE": TbMicrowave,
+      "TV": FiTv,
+      "CUPBOARD": LuArmchair,
+      "LIFT": MdOutlineElevator,
+      "PARKING": MdOutlineLocalParking,
+      "SECURITY": FaShieldAlt,
+      "CCTV": FaCctv,
+      "HOUSEKEEPING": MdOutlineLocalLaundryService,
+      "ATTACHED_BATHROOM": IoWaterOutline,
+      "BALCONY": MdDeck,
+      "STUDY_TABLE": TbTable,
+      "WATER_PURIFIER": FiDroplet,
+      "INVERTER": BsLightningCharge,
+      "NO_NON_VEG": MdOutlineNoFood,
+      "NO_SMOKING": MdOutlineSmokeFree,
+      "NO_ALCOHOL": MdOutlineLiquor,
+      "NO_OUTSIDERS": FiUser,
+      "WATER_HEATER": LuFlame,
+      "WIFI_INTERNET": RiWifiLine,
+      "24_HOUR_WATER": Ri24HoursLine,
+      "LIBRARY": FiBook,
+      "MESS": MdRestaurant,
+      "GYM": MdFitnessCenter,
+      "INTERNET": RiWifiLine,
+      "BROADBAND": RiWifiLine,
+      "HOT_WATER": LuFlame,
+      "COLD_WATER": FiDroplet,
+      "FAN": IoSpeedometer,
+      "BED": FiHome,
+      "MATTRESS": FiHome,
+      "PILLOW": FiHome,
+      "CURTAINS": FiHome,
+      "LIGHTS": FiHome,
+      "POWER": BsLightningCharge,
+      "ELECTRICITY": BsLightningCharge,
+      "COOKING": FiCoffee,
+      "KITCHEN": FiCoffee,
+      "GAS": FiHome,
+      "STOVE": FiCoffee,
+      "GYMNASIUM": MdFitnessCenter,
+      "SWIMMING_POOL": FiHome,
+      "POOL": FiHome,
+      "GARDEN": FiHome,
+      "LAUNDRY": MdOutlineLocalLaundryService,
+      "DRYER": MdOutlineLocalLaundryService,
+      "IRON": MdOutlineLocalLaundryService,
+      "DTH": FiTv,
+      "SET_TOP_BOX": FiTv,
+      "MUSIC": FiHome,
+      "SPEAKER": FiHome,
+      "HEATING": LuFlame,
+      "COOLING": TbAirConditioning,
+      "VENTILATION": IoSpeedometer,
+      "EXHAUST": IoSpeedometer,
+      "WATER_SUPPLY": BiWater,
+      "ROUND_THE_CLOCK_WATER": Ri24HoursLine,
+      "CONTINUOUS_WATER": Ri24HoursLine,
+      "READING_ROOM": FiBook,
+      "BOOKS": FiBook,
+      "FOOD": MdRestaurant,
+      "CAFETERIA": MdRestaurant,
+      "DINING": MdRestaurant,
     };
-    return map[key] || FiHome;
+    
+    if (exactMap[key]) {
+      return exactMap[key];
+    }
+    
+    const keyLower = key.toLowerCase().trim();
+    const keywordMap = {
+      "wifi": FiWifi,
+      "internet": RiWifiLine,
+      "wi-fi": RiWifiLine,
+      "ac": TbAirConditioning,
+      "air conditioner": TbAirConditioning,
+      "air conditioning": TbAirConditioning,
+      "geyser": LuFlame,
+      "water heater": LuFlame,
+      "heater": LuFlame,
+      "washing machine": GiWashingMachine,
+      "washing": GiWashingMachine,
+      "refrigerator": FaRegSnowflake,
+      "fridge": FaRegSnowflake,
+      "microwave": TbMicrowave,
+      "tv": FiTv,
+      "television": FiTv,
+      "cupboard": LuArmchair,
+      "wardrobe": LuArmchair,
+      "storage": LuArmchair,
+      "lift": MdOutlineElevator,
+      "elevator": MdOutlineElevator,
+      "parking": MdOutlineLocalParking,
+      "car parking": MdOutlineLocalParking,
+      "security": FaShieldAlt,
+      "cctv": FaCctv,
+      "housekeeping": MdOutlineLocalLaundryService,
+      "maid": MdOutlineLocalLaundryService,
+      "cleaning": MdOutlineLocalLaundryService,
+      "attached bathroom": IoWaterOutline,
+      "private bathroom": IoWaterOutline,
+      "bathroom": IoWaterOutline,
+      "balcony": MdDeck,
+      "study table": TbTable,
+      "desk": TbTable,
+      "water purifier": FiDroplet,
+      "purifier": FiDroplet,
+      "inverter": BsLightningCharge,
+      "power backup": BsLightningCharge,
+      "generator": BsLightningCharge,
+      "no non veg": MdOutlineNoFood,
+      "no non-veg": MdOutlineNoFood,
+      "vegetarian": MdOutlineNoFood,
+      "no smoking": MdOutlineSmokeFree,
+      "smoke free": MdOutlineSmokeFree,
+      "no alcohol": MdOutlineLiquor,
+      "alcohol free": MdOutlineLiquor,
+      "no outsiders": FiUser,
+      "restricted entry": FiUser,
+      "24 hour": Ri24HoursLine,
+      "24 hours": Ri24HoursLine,
+      "24/7": Ri24HoursLine,
+      "24x7": Ri24HoursLine,
+      "continuous": Ri24HoursLine,
+      "round the clock": Ri24HoursLine,
+      "library": FiBook,
+      "reading": FiBook,
+      "books": FiBook,
+      "water": BiWater,
+      "water supply": BiWater,
+      "hot water": LuFlame,
+      "cold water": FiDroplet,
+      "fan": IoSpeedometer,
+      "bed": FiHome,
+      "mattress": FiHome,
+      "pillow": FiHome,
+      "curtains": FiHome,
+      "lights": FiHome,
+      "power": BsLightningCharge,
+      "electricity": BsLightningCharge,
+      "cooking": FiCoffee,
+      "kitchen": FiCoffee,
+      "gas": FiHome,
+      "stove": FiCoffee,
+      "gym": MdFitnessCenter,
+      "gymnasium": MdFitnessCenter,
+      "fitness": MdFitnessCenter,
+      "workout": MdFitnessCenter,
+      "swimming pool": FiHome,
+      "pool": FiHome,
+      "garden": FiHome,
+      "laundry": MdOutlineLocalLaundryService,
+      "dryer": MdOutlineLocalLaundryService,
+      "iron": MdOutlineLocalLaundryService,
+      "broadband": RiWifiLine,
+      "dth": FiTv,
+      "set top box": FiTv,
+      "music": FiHome,
+      "speaker": FiHome,
+      "heating": LuFlame,
+      "cooling": TbAirConditioning,
+      "ventilation": IoSpeedometer,
+      "exhaust": IoSpeedometer,
+      "mess": MdRestaurant,
+      "food": MdRestaurant,
+      "cafeteria": MdRestaurant,
+      "dining": MdRestaurant,
+    };
+    
+    for (const [keyword, icon] of Object.entries(keywordMap)) {
+      if (keyLower.includes(keyword)) {
+        return icon;
+      }
+    }
+    
+    return FiHome;
   };
 
-  const amenityGroups = {
-    essentials: [
-      "WIFI",
-      "AC",
-      "GEYSER",
-      "WASHING_MACHINE",
-      "REFRIGERATOR",
-      "MICROWAVE",
-      "TV",
-      "CUPBOARD",
-    ],
-    facilities: [
-      "PARKING",
-      "LIFT",
-      "SECURITY",
-      "CCTV",
-      "HOUSEKEEPING",
-      "WATER_PURIFIER",
-      "INVERTER",
-    ],
-    features: ["ATTACHED_BATHROOM", "BALCONY", "STUDY_TABLE"],
-    rules: ["NO_NON_VEG", "NO_SMOKING", "NO_ALCOHOL", "NO_OUTSIDERS"],
+  const formatAmenity = (text) => {
+    if (!text) return "";
+    
+    const specialCases = {
+      "WIFI_INTERNET": "WiFi Internet",
+      "24_HOUR_WATER": "24 Hour Water",
+      "WATER_HEATER": "Water Heater",
+      "WASHING_MACHINE": "Washing Machine",
+      "ATTACHED_BATHROOM": "Attached Bathroom",
+      "STUDY_TABLE": "Study Table",
+      "WATER_PURIFIER": "Water Purifier",
+      "NO_NON_VEG": "No Non-Veg",
+      "NO_SMOKING": "No Smoking",
+      "NO_ALCOHOL": "No Alcohol",
+      "NO_OUTSIDERS": "No Outsiders",
+    };
+    
+    if (specialCases[text]) {
+      return specialCases[text];
+    }
+    
+    return text
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .replace(/\bNo\b/g, "No")
+      .replace(/\bAc\b/g, "AC")
+      .replace(/\bTv\b/g, "TV")
+      .replace(/\bWifi\b/g, "WiFi");
   };
 
-  const formatAmenity = (t) =>
-    t.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-
-  const formatBHK = (t) => {
-    if (!t) return "Room";
-    const m = t.match(/BHK(\d+)/i);
-    return m ? `${m[1]} BHK` : t;
+  const formatBHK = (type) => {
+    if (!type) return "Room";
+    const typeMap = {
+      "RK": "RK (Room + Kitchen)",
+      "BHK1": "1 BHK",
+      "BHK2": "2 BHK",
+      "BHK3": "3 BHK",
+      "SHARED": "Shared Room",
+      "PG": "PG / Hostel"
+    };
+    return typeMap[type] || type;
   };
 
-  /** -------------------------------------
-   *  FULLSCREEN IMAGE VIEW
-   * ------------------------------------- */
+  const formatFurnishing = (furnished) => {
+    if (!furnished) return "Not specified";
+    const map = {
+      "FURNISHED": "Fully Furnished",
+      "SEMI_FURNISHED": "Semi-Furnished",
+      "UNFURNISHED": "Unfurnished",
+    };
+    return map[furnished] || furnished.replace(/_/g, " ");
+  };
+
+  const formatGender = (gender) => {
+    if (!gender) return "Anyone";
+    const map = {
+      "BOYS": "Boys Only",
+      "GIRLS": "Girls Only",
+      "ANYONE": "Anyone"
+    };
+    return map[gender] || gender;
+  };
+
+  const handleLike = () => {
+    const newLiked = !liked;
+    setLiked(newLiked);
+    handleFavorite(newLiked);
+  };
+
+  const handleContact = (method = "whatsapp") => {
+    const phone = room.phone || room.whatsapp || "";
+    const cleanPhone = phone.replace(/\D/g, "");
+    
+    if (!cleanPhone) {
+      setShowContactSheet(true);
+      return;
+    }
+    
+    const message = `Hi, I'm interested in your ${formatBHK(room.type)} at ${address.area || address.line1 || "your property"}.`;
+    
+    if (method === "whatsapp") {
+      window.open(
+        `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`,
+        "_blank"
+      );
+    } else if (method === "phone") {
+      window.open(`tel:${cleanPhone}`, "_blank");
+    }
+    setShowContactSheet(false);
+  };
+
+  // Fullscreen Viewer Component
   const FullscreenView = () => {
     if (!isFullscreen) return null;
 
     return (
-      <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center">
-        <button
-          onClick={() => setIsFullscreen(false)}
-          className="absolute top-6 right-6 text-white p-3 hover:bg-white/10 rounded-full transition-colors"
+      <div
+        className="fixed inset-0 z-50 bg-black flex items-center justify-center"
+        onClick={() => setIsFullscreen(false)}
+      >
+        <div
+          className="relative w-full h-full flex items-center justify-center"
+          onClick={(e) => e.stopPropagation()}
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        <div className="relative w-full max-w-6xl h-full flex items-center justify-center p-4">
           <button
-            onClick={() => setLocalIndex((i) => (i === 0 ? safeImages.length - 1 : i - 1))}
-            className="absolute left-4 lg:left-8 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-10"
+            onClick={() => setIsFullscreen(false)}
+            className="absolute top-4 right-4 text-white p-3 hover:bg-white/10 rounded-full transition-all z-20"
+            aria-label="Close"
           >
-            <FiChevronLeft size={28} />
+            <FiX size={24} />
           </button>
 
           <div className="relative w-full h-full flex items-center justify-center">
             <img
-              src={safeImages[localIndex]}
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-              alt="Room fullscreen view"
+              src={imageUrls[localIndex]}
+              alt={`Fullscreen view ${localIndex + 1}`}
+              className="max-w-full max-h-full object-contain"
+              draggable="false"
             />
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white bg-black/50 px-4 py-2 rounded-full text-sm">
-              {localIndex + 1} / {safeImages.length}
+          </div>
+
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white bg-black/70 px-4 py-2 rounded-full text-sm">
+            {localIndex + 1} / {imageUrls.length}
+          </div>
+          
+          {imageUrls.length > 1 && (
+            <div className="absolute bottom-20 left-0 right-0 flex justify-center gap-8">
+              <button
+                onClick={() =>
+                  setLocalIndex((i) => i === 0 ? imageUrls.length - 1 : i - 1)
+                }
+                className="p-3 bg-black/60 text-white rounded-full"
+              >
+                <FiChevronLeft size={24} />
+              </button>
+              <button
+                onClick={() =>
+                  setLocalIndex((i) => (i + 1) % imageUrls.length)
+                }
+                className="p-3 bg-black/60 text-white rounded-full"
+              >
+                <FiChevronRight size={24} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Contact Sheet Modal
+  const ContactSheet = () => {
+    if (!showContactSheet) return null;
+
+    const phone = room.phone || room.whatsapp || "";
+    
+    return (
+      <div 
+        className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center p-4 touch-none"
+        onClick={() => setShowContactSheet(false)}
+      >
+        <div 
+          className="bg-white rounded-t-2xl md:rounded-2xl w-full max-w-md shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 className="font-bold text-lg">Contact Options</h3>
+            <button
+              onClick={() => setShowContactSheet(false)}
+              className="p-2 hover:bg-gray-100 rounded-full active:bg-gray-200"
+            >
+              <FiX size={20} />
+            </button>
+          </div>
+          
+          <div className="p-6 space-y-4">
+            {phone ? (
+              <>
+                <button
+                  onClick={() => handleContact("whatsapp")}
+                  className="w-full bg-green-500 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3 active:bg-green-600 touch-manipulation"
+                >
+                  <FaWhatsapp size={24} />
+                  <span>WhatsApp</span>
+                </button>
+                
+                <button
+                  onClick={() => handleContact("phone")}
+                  className="w-full bg-blue-600 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3 active:bg-blue-700 touch-manipulation"
+                >
+                  <IoCallOutline size={24} />
+                  <span>Call Now</span>
+                </button>
+                
+                <div className="text-center text-gray-600 mt-4">
+                  <p className="font-medium">Phone: {phone}</p>
+                  <p className="text-sm mt-2">Tap above to contact directly</p>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <MdCall size={48} className="text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No contact information available</p>
+              </div>
+            )}
+            
+            <button
+              onClick={() => {
+                handleShare();
+                setShowContactSheet(false);
+              }}
+              className="w-full border-2 border-gray-300 text-gray-700 font-semibold py-3 rounded-xl flex items-center justify-center gap-3 active:bg-gray-50 touch-manipulation"
+            >
+              <FiShare2 size={20} />
+              <span>Share Listing</span>
+            </button>
+          </div>
+          
+          <div className="p-4 border-t border-gray-200 text-center">
+            <button
+              onClick={() => setShowContactSheet(false)}
+              className="text-gray-500 hover:text-gray-700 font-medium py-2 px-4 active:text-gray-800"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Image Gallery Component - FIXED FOR MOBILE
+  const GalleryArea = () => {
+    return (
+      <div className="relative">
+        <div
+          ref={touchAreaRef}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          className="relative bg-black overflow-hidden"
+        >
+          {/* Responsive height - Reduced for mobile */}
+          <div className="relative w-full h-[45vh] sm:h-[50vh] md:h-[60vh] lg:h-[70vh]">
+            {/* Blur placeholder */}
+            <img
+              src={imageUrls[localIndex]}
+              className={`absolute inset-0 w-full h-full object-cover blur-xl transition-opacity duration-500 ${
+                imageLoaded[localIndex] ? "opacity-0" : "opacity-50"
+              }`}
+              alt=""
+            />
+
+            {/* Main image */}
+            <img
+              src={imageUrls[localIndex]}
+              onLoad={() => handleImageLoad(localIndex)}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                imageLoaded[localIndex] ? "opacity-100" : "opacity-0"
+              }`}
+              draggable="false"
+              alt={`Room image ${localIndex + 1}`}
+            />
+
+            {/* Overlay gradient */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30" />
+
+            {/* Top controls */}
+            <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
+              <button
+                onClick={() => router.back()}
+                className="p-3 bg-black/60 backdrop-blur-sm rounded-full text-white active:bg-black/80"
+              >
+                <FiChevronLeft size={20} />
+              </button>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleLike}
+                  className="p-3 bg-black/60 backdrop-blur-sm rounded-full text-white active:bg-black/80"
+                >
+                  <FiHeart
+                    size={20}
+                    className={liked ? "fill-red-500 text-red-500" : ""}
+                  />
+                </button>
+                <button
+                  onClick={() => setShowContactSheet(true)}
+                  className="p-3 bg-black/60 backdrop-blur-sm rounded-full text-white active:bg-black/80"
+                >
+                  <FiShare2 size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Zoom button */}
+            <button
+              onClick={() => setIsFullscreen(true)}
+              className="absolute bottom-20 right-4 p-3 bg-black/60 backdrop-blur-sm rounded-full text-white active:bg-black/80"
+              aria-label="Zoom in"
+            >
+              <FiMaximize2 size={20} />
+            </button>
+
+            {/* Image counter */}
+            <div className="absolute bottom-20 left-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
+              {localIndex + 1} / {imageUrls.length}
+            </div>
+
+            {/* Mobile navigation arrows */}
+            {imageUrls.length > 1 && (
+              <div className="absolute inset-0 flex items-center justify-between p-4 pointer-events-none">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const prev = localIndex === 0 ? imageUrls.length - 1 : localIndex - 1;
+                    setLocalIndex(prev);
+                    setCurrentImageIndex(prev);
+                  }}
+                  className="pointer-events-auto p-3 bg-black/40 text-white rounded-full active:bg-black/60"
+                >
+                  <FiChevronLeft size={20} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next = (localIndex + 1) % imageUrls.length;
+                    setLocalIndex(next);
+                    setCurrentImageIndex(next);
+                  }}
+                  className="pointer-events-auto p-3 bg-black/40 text-white rounded-full active:bg-black/60"
+                >
+                  <FiChevronRight size={20} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Dots indicator */}
+          {imageUrls.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+              {imageUrls.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLocalIndex(idx);
+                    setCurrentImageIndex(idx);
+                  }}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    idx === localIndex
+                      ? "bg-white w-6"
+                      : "bg-white/50"
+                  }`}
+                  aria-label={`Go to image ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Mobile-friendly Action Bar
+  const MobileActionBar = () => {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] safe-bottom">
+        <div className="flex items-center justify-between">
+          {/* Price info */}
+          <div className="flex-1 min-w-0 mr-4">
+            <p className="text-sm font-medium text-gray-600">Monthly Rent</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-bold text-gray-900">
+                ₹{room.rent?.toLocaleString("en-IN") || "0"}
+              </span>
+              <span className="text-xs text-gray-500">
+                + ₹{room.deposit?.toLocaleString("en-IN") || "0"} deposit
+              </span>
+            </div>
+            {room.type && (
+              <p className="text-xs text-gray-500 truncate mt-1">
+                {formatBHK(room.type)} • {formatFurnishing(room.furnished)}
+              </p>
+            )}
+          </div>
+          
+          {/* Action buttons */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowContactSheet(true)}
+              className="p-3 rounded-xl bg-gray-100 active:bg-gray-200 touch-manipulation flex-shrink-0"
+              aria-label="More options"
+            >
+              <BsThreeDots size={20} className="text-gray-600" />
+            </button>
+            <button
+              onClick={() => handleContact("whatsapp")}
+              className="bg-green-500 text-white font-semibold py-3 px-4 rounded-xl active:bg-green-600 touch-manipulation min-w-[100px] flex-shrink-0 whitespace-nowrap"
+            >
+              Contact
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Details Panel Component
+  const DetailsPanel = () => {
+    const amenitiesList = room.amenities || [];
+    const visibleAmenities = showAllAmenities
+      ? amenitiesList
+      : amenitiesList.slice(0, 8); // Show 8 amenities initially
+
+    const formattedAddress = [
+      address.area,
+      address.city,
+      address.state
+    ].filter(Boolean).join(", ");
+
+    return (
+      <div className="px-4 pb-24" ref={detailsRef}>
+        {/* Main details card - No negative margin */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* Header */}
+          <div className="p-4">
+            {/* Property type badges */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                {formatBHK(room.type)}
+              </span>
+              
+              {room.furnished && (
+                <span className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold">
+                  {formatFurnishing(room.furnished)}
+                </span>
+              )}
+              
+              {room.brokerageRequired !== undefined && !room.brokerageRequired && (
+                <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+                  No Brokerage
+                </span>
+              )}
+            </div>
+
+            {/* Title */}
+            <h1 className="text-lg font-bold text-gray-900 mb-2 leading-tight">
+              {room.title || `${formatBHK(room.type)} in ${address.area || address.city || "Pune"}`}
+            </h1>
+
+            {/* Address - Fixed for better mobile display */}
+            <div className="flex items-start gap-2 text-gray-600 mb-4">
+              <FiMapPin className="text-blue-500 mt-0.5 flex-shrink-0" size={16} />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-gray-900 text-sm truncate">{formattedAddress || "Location"}</p>
+                {address.line1 && (
+                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{address.line1}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Quick stats - Mobile optimized */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <FiUsers className="text-blue-600" size={16} />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">For</p>
+                  <p className="font-semibold text-gray-900 text-sm">
+                    {formatGender(room.gender)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <LuArmchair className="text-blue-600" size={16} />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Furnishing</p>
+                  <p className="font-semibold text-gray-900 text-sm">
+                    {formatFurnishing(room.furnished)}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <button
-            onClick={() => setLocalIndex((i) => (i + 1) % safeImages.length)}
-            className="absolute right-4 lg:right-8 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-10"
-          >
-            <FiChevronRight size={28} />
-          </button>
+          {/* Description */}
+          <div className="p-4 border-t border-gray-100">
+            <div className="flex items-center gap-2 mb-3">
+              <FiInfo className="text-gray-400" size={16} />
+              <h3 className="font-semibold text-gray-900 text-sm">Description</h3>
+            </div>
+            <div className="max-h-[120px] overflow-y-auto">
+              <p className="text-gray-600 leading-relaxed text-sm whitespace-pre-line">
+                {room.description && room.description.trim() !== "" 
+                  ? room.description 
+                  : "No detailed description provided. Contact for more details."}
+              </p>
+            </div>
+          </div>
+
+          {/* Amenities */}
+          {amenitiesList.length > 0 && (
+            <div className="p-4 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-900 text-sm">Amenities & Rules</h3>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  {amenitiesList.length}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {visibleAmenities.map((amenity) => {
+                  const Icon = getAmenityIcon(amenity);
+                  const isRule = amenity.toLowerCase().includes('no ');
+                  
+                  return (
+                    <div
+                      key={amenity}
+                      className={`flex items-center gap-2 p-2.5 rounded-lg ${
+                        isRule
+                          ? "bg-red-50 border border-red-100"
+                          : "bg-gray-50 border border-gray-100"
+                      }`}
+                    >
+                      <Icon 
+                        className={isRule ? "text-red-600" : "text-blue-600"} 
+                        size={14} 
+                      />
+                      <span className={`text-xs font-medium ${
+                        isRule ? "text-red-700" : "text-gray-700"
+                      }`}>
+                        {formatAmenity(amenity)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {amenitiesList.length > 8 && (
+                <button
+                  onClick={() => setShowAllAmenities(!showAllAmenities)}
+                  className="w-full mt-3 text-blue-600 hover:text-blue-700 font-medium text-xs flex items-center justify-center gap-1 py-2 active:text-blue-800"
+                >
+                  {showAllAmenities ? "Show less" : "Show all amenities"}
+                  <FiExternalLink size={10} />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Contact Information */}
+          <div className="p-4 border-t border-gray-100">
+            <h3 className="font-semibold text-gray-900 text-sm mb-3">Contact Info</h3>
+            <div className="space-y-2">
+              {room.phone && (
+                <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-green-100 rounded-lg">
+                      <IoCallOutline className="text-green-600" size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-500">Phone Number</p>
+                      <p className="font-medium text-gray-900 text-sm truncate">{room.phone}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleContact("phone")}
+                    className="text-blue-600 font-medium text-xs px-2 py-1.5 active:text-blue-800 whitespace-nowrap"
+                  >
+                    Call
+                  </button>
+                </div>
+              )}
+              
+              {room.whatsapp && (
+                <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-green-100 rounded-lg">
+                      <FaWhatsapp className="text-green-600" size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-500">WhatsApp</p>
+                      <p className="font-medium text-gray-900 text-sm truncate">{room.whatsapp}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleContact("whatsapp")}
+                    className="text-green-600 font-medium text-xs px-2 py-1.5 active:text-green-800 whitespace-nowrap"
+                  >
+                    Message
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* Contact buttons */}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleContact("whatsapp")}
+                className="bg-green-500 text-white font-semibold py-2.5 px-2 rounded-xl active:bg-green-700 flex items-center justify-center gap-1.5 touch-manipulation"
+              >
+                <FaWhatsapp size={16} />
+                <span className="text-xs">WhatsApp</span>
+              </button>
+              
+              <button
+                onClick={() => handleContact("phone")}
+                className="bg-blue-600 text-white font-semibold py-2.5 px-2 rounded-xl active:bg-blue-800 flex items-center justify-center gap-1.5 touch-manipulation"
+              >
+                <MdCall size={16} />
+                <span className="text-xs">Call Now</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Additional info */}
+          <div className="p-3 border-t border-gray-100 bg-gray-50">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>ID: {room.id || "N/A"}</span>
+              <span>Posted: {room.createdAt 
+                ? new Date(room.createdAt).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short'
+                  })
+                : "Recently"}</span>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -224,338 +964,119 @@ export default function RoomDetailsUI({
   return (
     <>
       <FullscreenView />
+      <ContactSheet />
       
-      <div className="animate-fadeInSlow px-3 sm:px-6 flex justify-center">
-        <div className="w-full max-w-6xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
-            
-            {/* --------------------------------------------------------
-             *  LEFT - MODERN IMAGE GALLERY
-             * ------------------------------------------------------ */}
-            <div className="space-y-4">
-              {/* Main Image Container with Enhanced UI */}
-              <div className="relative group">
-                <div
-                  className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 shadow-lg"
-                  ref={imageContainerRef}
-                  onTouchStart={onTouchStart}
-                  onTouchMove={onTouchMove}
-                  onTouchEnd={onTouchEnd}
-                >
-                  {/* Image with Smart Loading */}
-                  <div className="relative w-full aspect-[4/3] flex items-center justify-center">
-                    {!imageLoaded[localIndex] && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-                      </div>
-                    )}
-                    
-                    <img
-                      src={safeImages[localIndex]}
-                      className={`
-                        w-full h-full object-contain transition-all duration-300
-                        ${imageLoaded[localIndex] ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
-                        cursor-zoom-in
-                      `}
-                      loading="lazy"
-                      decoding="async"
-                      draggable="false"
-                      onLoad={() => handleImageLoad(localIndex)}
-                      onClick={() => setIsFullscreen(true)}
-                      alt={`Room image ${localIndex + 1}`}
-                    />
-                  </div>
-
-                  {/* Overlay Controls */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    {/* Fullscreen Button */}
-                    <button
-                      onClick={() => setIsFullscreen(true)}
-                      className="absolute top-4 right-4 p-3 bg-black/60 hover:bg-black/80 text-white rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-110 shadow-lg"
-                      title="View fullscreen"
-                    >
-                      <FiMaximize2 size={20} />
-                    </button>
-
-                    {/* Gallery Button */}
-                    <button
-                      onClick={() => router.push(`/room/${room.id}/gallery?photo=${localIndex}`)}
-                      className="absolute top-4 left-4 p-3 bg-black/60 hover:bg-black/80 text-white rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-110 shadow-lg"
-                      title="View gallery"
-                    >
-                      <FiZoomIn size={20} />
-                    </button>
-                  </div>
-
-                  {/* Navigation Arrows - Desktop */}
-                  {safeImages.length > 1 && (
-                    <>
-                      <button
-                        onClick={() => setLocalIndex((i) => (i === 0 ? safeImages.length - 1 : i - 1))}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 transform hidden md:block"
-                        aria-label="Previous image"
-                      >
-                        <FiChevronLeft size={24} />
-                      </button>
-
-                      <button
-                        onClick={() => setLocalIndex((i) => (i + 1) % safeImages.length)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 transform hidden md:block"
-                        aria-label="Next image"
-                      >
-                        <FiChevronRight size={24} />
-                      </button>
-                    </>
-                  )}
-
-                  {/* Image Counter */}
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
-                    {localIndex + 1} / {safeImages.length}
-                  </div>
-
-                  {/* Swipe Indicator - Mobile */}
-                  <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-black/40 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs flex items-center gap-2 md:hidden">
-                    <FiChevronLeft size={14} />
-                    <span>Swipe to navigate</span>
-                    <FiChevronRight size={14} />
-                  </div>
-                </div>
-
-                {/* Enhanced Thumbnail Grid */}
-                {safeImages.length > 1 && (
-                  <div className="mt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-semibold text-slate-700">Gallery</h3>
-                      <span className="text-xs text-slate-500">{safeImages.length} photos</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-4 gap-2">
-                      {safeImages.map((src, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setLocalIndex(index)}
-                          className={`
-                            relative overflow-hidden rounded-lg transition-all duration-300
-                            ${index === localIndex 
-                              ? 'ring-2 ring-purple-500 ring-offset-2 scale-[1.02] shadow-md' 
-                              : 'opacity-80 hover:opacity-100 hover:scale-[1.02]'
-                            }
-                            aspect-square
-                          `}
-                          aria-label={`View image ${index + 1}`}
-                        >
-                          {/* Thumbnail Loader */}
-                          {!imageLoaded[index] && (
-                            <div className="absolute inset-0 bg-gradient-to-br from-slate-100 to-slate-200 animate-pulse"></div>
-                          )}
-                          
-                          <img
-                            src={src}
-                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
-                            loading="lazy"
-                            alt={`Thumbnail ${index + 1}`}
-                            onLoad={() => handleImageLoad(index)}
-                          />
-                          
-                          {/* Active Indicator */}
-                          {index === localIndex && (
-                            <div className="absolute inset-0 bg-purple-500/20 pointer-events-none"></div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Quick Actions Bar */}
-              <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200 shadow-sm">
-                <button
-                  onClick={handleFavorite}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg hover:bg-slate-50 transition-colors flex-1 justify-center"
-                >
-                  <FiHeart className={isFavorite ? "text-red-500" : "text-slate-600"} size={20} />
-                  <span className="text-sm font-medium text-slate-700">
-                    {isFavorite ? "Saved" : "Save"}
-                  </span>
-                </button>
-                
-                <div className="w-px h-6 bg-slate-200"></div>
-                
-                <button
-                  onClick={handleShare}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg hover:bg-slate-50 transition-colors flex-1 justify-center"
-                >
-                  <FiShare2 className="text-slate-600" size={20} />
-                  <span className="text-sm font-medium text-slate-700">Share</span>
-                </button>
-                
-                <div className="w-px h-6 bg-slate-200"></div>
-                
-                <button
-                  onClick={() => router.push(`/room/${room.id}/gallery`)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg hover:bg-slate-50 transition-colors flex-1 justify-center"
-                >
-                  <FiZoomIn className="text-slate-600" size={20} />
-                  <span className="text-sm font-medium text-slate-700">View All</span>
-                </button>
-              </div>
-            </div>
-
-            {/* --------------------------------------------------------
-             *  RIGHT - ENHANCED ROOM DETAILS
-             * ------------------------------------------------------ */}
-            <aside className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-3 py-1.5 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 rounded-full text-xs font-semibold">
-                      {formatBHK(room.type)}
-                    </span>
-                    {room.isVerified && (
-                      <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                        Verified
-                      </span>
-                    )}
-                  </div>
-
-                  <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
-                    {room.title || `${formatBHK(room.type)} in ${address.area}`}
-                  </h1>
-
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <FiMapPin className="text-purple-500" />
-                    <span className="text-sm md:text-base">{address.area}, {address.city}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Price Card - Enhanced */}
-              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-xl border border-purple-100 mb-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-medium text-purple-700 mb-1">Monthly Rent</p>
-                    <p className="text-3xl md:text-4xl font-bold text-slate-900">
-                      ₹{room.rent?.toLocaleString("en-IN") || "0"}
-                    </p>
-                    <p className="text-sm text-slate-600 mt-2">
-                      + ₹{room.deposit?.toLocaleString("en-IN") || "0"} security deposit
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-slate-500">Available</p>
-                    <p className="text-sm font-semibold text-green-600">Immediately</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Stats Grid */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-slate-50 p-4 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white rounded-lg shadow-sm">
-                      <FiHome className="text-purple-600" size={20} />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Furnishing</p>
-                      <p className="font-semibold text-slate-900">{room.furnished || "Semi-furnished"}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-4 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white rounded-lg shadow-sm">
-                      <FiUsers className="text-pink-600" size={20} />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Preferred for</p>
-                      <p className="font-semibold text-slate-900">
-                        {room.gender === "BOYS" ? "Boys" : 
-                         room.gender === "GIRLS" ? "Girls" : "Anyone"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Amenities Section - Enhanced */}
-              {room.amenities?.length > 0 && (
-                <div className="mt-8">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                    <span className="w-1.5 h-6 bg-purple-500 rounded-full"></span>
-                    Amenities & Features
-                  </h3>
-
-                  <div className="space-y-6">
-                    {Object.entries(amenityGroups).map(([groupName, group]) => {
-                      const available = group.filter((x) => room.amenities.includes(x));
-                      if (!available.length) return null;
-
-                      return (
-                        <div key={groupName} className="border-t border-slate-100 pt-4">
-                          <h4 className="text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wider">
-                            {groupName.replace(/_/g, " ")}
-                          </h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {available.map((item, idx) => {
-                              const Icon = getAmenityIcon(item.toLowerCase());
-                              return (
-                                <div key={idx} className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors">
-                                  <div className={`p-2 rounded-lg ${
-                                    groupName === "rules" ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-700"
-                                  }`}>
-                                    <Icon size={18} />
-                                  </div>
-                                  <span className="text-sm font-medium text-slate-800">
-                                    {formatAmenity(item)}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Description Section */}
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <span className="w-1.5 h-6 bg-blue-500 rounded-full"></span>
-                  Description
-                </h3>
-                <div className="bg-slate-50/50 p-5 rounded-xl border border-slate-200">
-                  <p className="text-slate-700 leading-relaxed whitespace-pre-line">
-                    {room.description || "No description provided. Contact owner for more details."}
-                  </p>
-                </div>
-              </div>
-
-              {/* Contact CTA */}
-              <div className="mt-8 pt-6 border-t border-slate-200">
-                <button
-                  onClick={() => {
-                    const phone = "911234567890";
-                    const message = `Hi, I'm interested in your ${room.type} at ${address.area}.`;
-                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-                  }}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-3"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.76.982.998-3.675-.236-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.9 6.994c-.004 5.45-4.438 9.88-9.888 9.88m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.333.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.333 11.893-11.893 0-3.18-1.24-6.162-3.495-8.411"/>
-                  </svg>
-                  Contact on WhatsApp
-                </button>
-              </div>
-            </aside>
-          </div>
+      <div className="min-h-screen bg-gray-50">
+        {/* Mobile header - Simplified */}
+        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between safe-top">
+          <button
+            onClick={() => router.back()}
+            className="p-2 rounded-full active:bg-gray-100 touch-manipulation"
+          >
+            <FiChevronLeft size={18} />
+          </button>
+          <h2 className="font-semibold text-gray-900 text-sm truncate max-w-[160px]">
+            Property Details
+          </h2>
+          <button
+            onClick={handleLike}
+            className="p-2 rounded-full active:bg-gray-100 touch-manipulation"
+          >
+            <FiHeart
+              size={18}
+              className={liked ? "fill-red-500 text-red-500" : "text-gray-600"}
+            />
+          </button>
         </div>
+
+        <GalleryArea />
+        <DetailsPanel />
+        <MobileActionBar />
       </div>
+      
+      {/* Mobile optimization styles */}
+      <style jsx global>{`
+        /* Safe areas for mobile devices */
+        .safe-top {
+          padding-top: env(safe-area-inset-top, 0);
+        }
+        
+        .safe-bottom {
+          padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        
+        .pb-safe {
+          padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        
+        /* Hide scrollbar for horizontal scroll */
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Better touch handling */
+        .touch-manipulation {
+          touch-action: manipulation;
+        }
+        
+        .touch-pan-x {
+          touch-action: pan-x;
+        }
+        
+        /* Better text truncation */
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        
+        /* Prevent blue highlight on mobile */
+        * {
+          -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Smooth scrolling */
+        html {
+          scroll-behavior: smooth;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 640px) {
+          input, select, textarea, button {
+            font-size: 16px;
+          }
+          
+          /* Ensure content doesn't overflow */
+          body {
+            overflow-x: hidden;
+          }
+          
+          /* Better scrolling for description */
+          .overflow-y-auto {
+            scrollbar-width: none;
+          }
+          .overflow-y-auto::-webkit-scrollbar {
+            display: none;
+          }
+        }
+        
+        /* Prevent pull-to-refresh on mobile */
+        body {
+          overscroll-behavior-y: contain;
+        }
+        
+        /* Improve font rendering on mobile */
+        body {
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+      `}</style>
     </>
   );
 }
+

@@ -10,9 +10,10 @@ export default function SearchPill({ area, setArea, onSearch }) {
         onSearch(area);
       }}
       className="
-        w-full max-w-2xl mx-auto
+        w-full max-w-lg sm:max-w-2xl mx-auto
         bg-white rounded-full shadow-xl
-        px-6 py-4 flex items-center justify-between
+        px-4 sm:px-6 py-3.5
+        flex items-center justify-between
         border border-slate-200
       "
     >

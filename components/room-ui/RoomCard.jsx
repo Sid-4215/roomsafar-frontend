@@ -1,6 +1,8 @@
 "use client";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import Image from "next/image";
+import { memo, useState } from "react";
+
 import {
   FiHeart,
   FiMapPin,
@@ -9,9 +11,10 @@ import {
   FiCheckCircle,
 } from "react-icons/fi";
 
-export default function RoomCard({ room }) {
+// ⚡ Memoized to avoid re-renders → smooth scrolling
+export default memo(function RoomCard({ room }) {
   const router = useRouter();
-  const [error, setError] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const img = room?.images?.[0]?.url || "/no-image.jpg";
   const area = room.address?.area || "Area";
@@ -20,19 +23,10 @@ export default function RoomCard({ room }) {
   const formatINR = (n) =>
     typeof n === "number" ? `₹${n.toLocaleString("en-IN")}` : "₹—";
 
-  // 👉 Add this function to format room type (BHK2 → 2BHK, RK → 1RK)
   const formatRoomType = (type) => {
     if (!type) return "Room";
-
-    if (type.startsWith("BHK")) {
-      const num = type.replace("BHK", "");
-      return `${num}BHK`;
-    }
-
-    if (type === "RK") {
-      return "1RK";
-    }
-
+    if (type.startsWith("BHK")) return `${type.replace("BHK", "")}BHK`;
+    if (type === "RK") return "1RK";
     return type;
   };
 
@@ -40,70 +34,86 @@ export default function RoomCard({ room }) {
     <div
       onClick={() => router.push(`/room/${room.id}`)}
       className="
-        bg-white/70 backdrop-blur-xl
+        group
+        bg-white/90 
         border border-white/40
         rounded-3xl overflow-hidden 
-        shadow-[0_8px_30px_rgba(0,0,0,0.08)]
-        hover:shadow-[0_12px_45px_rgba(0,0,0,0.18)]
-        transition-all duration-500 
+        shadow-[0_8px_25px_rgba(0,0,0,0.08)]
+        hover:shadow-[0_12px_40px_rgba(0,0,0,0.14)]
+        transition-transform duration-500 
         hover:-translate-y-2 cursor-pointer
+
+        /* GPU acceleration + reduced scroll jank */
+        will-change-transform
+        [transform:translateZ(0)]
       "
     >
-      {/* IMAGE */}
-      <div className="relative h-64 overflow-hidden rounded-3xl">
-        <img
-          src={error ? '/no-image.jpg' : img}
-          onError={() => setError(true)}
+      {/* IMAGE — FIXED ASPECT RATIO + NO LAYOUT SHIFT */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl">
+        <Image
+          src={imgError ? "/no-image.jpg" : img}
+          alt="room"
+          fill
+          loading="lazy"
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
           className="
-            w-full h-full object-cover
-            transition-transform duration-700
+            object-cover 
+            transition-transform duration-700 ease-out
             group-hover:scale-110
+            will-change-transform
+            [transform:translateZ(0)]
           "
+          onError={() => setImgError(true)}
+          placeholder="blur"
+          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiIC8+PC9zdmc+"
         />
 
-        {/* gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
 
         {/* TAGS */}
         <div className="absolute top-4 left-4 flex items-center gap-2">
           {room.isVerified && (
-            <span className="
-              flex items-center gap-1 px-2.5 py-1 
-              bg-green-100/90 text-green-700 text-xs font-semibold
-              rounded-full shadow
-            ">
+            <span
+              className="
+                flex items-center gap-1 px-2.5 py-1 
+                bg-green-100 text-green-700 text-xs font-semibold
+                rounded-full shadow
+              "
+            >
               <FiCheckCircle size={13} /> Verified
             </span>
           )}
 
-          <span className="
-            px-3 py-1 text-xs font-semibold
-            bg-purple-600/90 text-white rounded-full
-            shadow-lg
-          ">
+          <span
+            className="
+              px-3 py-1 text-xs font-semibold
+              bg-purple-600 text-white rounded-full shadow
+            "
+          >
             {formatRoomType(room.type)}
           </span>
         </div>
 
-        {/* RENT TAG */}
-        <div className="
-          absolute top-4 right-4 
-          bg-white/90 backdrop-blur-xl
-          px-4 py-1.5 rounded-xl shadow
-        ">
+        {/* RENT */}
+        <div
+          className="
+            absolute top-4 right-4 
+            bg-white/90 px-4 py-1.5 rounded-xl shadow backdrop-blur-md
+          "
+        >
           <span className="text-lg font-bold text-slate-900">
             {formatINR(room.rent)}
           </span>
-          <span className="text-xs text-slate-500">/mo</span>
+          <span className="text-xs text-slate-600">/mo</span>
         </div>
 
         {/* HEART ICON */}
         <div
           className="
             absolute bottom-4 right-4 
-            bg-white/90 backdrop-blur-xl p-2 
-            rounded-full shadow-md hover:bg-white 
-            transition
+            bg-white/90 p-2 
+            rounded-full shadow-md hover:bg-white transition
           "
         >
           <FiHeart size={20} className="text-slate-700" />
@@ -117,7 +127,6 @@ export default function RoomCard({ room }) {
           {area}, {city}
         </div>
 
-        {/* DESCRIPTION */}
         <p className="text-sm text-slate-600 mt-2 line-clamp-2 leading-relaxed">
           {room.description ||
             "A comfortable living space perfect for students or working professionals."}
@@ -142,4 +151,4 @@ export default function RoomCard({ room }) {
       </div>
     </div>
   );
-}
+});

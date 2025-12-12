@@ -99,7 +99,6 @@ export default function SectionGallery({ roomId }) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
-
   return (
     <div className="min-h-screen bg-white">
       {/* TOP NAV */}

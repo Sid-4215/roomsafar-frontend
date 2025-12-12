@@ -2,19 +2,25 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Disable Turbopack
-  experimental: {
-    webpackBuildWorker: true, // force webpack
-    turbo: {
-      enabled: false,
-    },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "**",
+      },
+    ],
   },
 
-  // Fix source map issues
+  experimental: {
+    webpackBuildWorker: true,
+    turbo: { enabled: false },
+  },
+
   webpack: (config) => {
     config.devtool = "eval-source-map";
     return config;
-  }
+  },
 };
 
 export default nextConfig;

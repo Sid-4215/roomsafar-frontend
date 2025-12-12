@@ -23,7 +23,7 @@ export default function FilterModal({
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMode, setCalendarMode] = useState("single");
   const [isClient, setIsClient] = useState(false);
-  const [RangeComponent, setRangeComponent] = useState(null);
+  const [DateRangeComponent, setDateRangeComponent] = useState(null);
 
   const [range, setRange] = useState([
     {
@@ -37,7 +37,7 @@ export default function FilterModal({
   useEffect(() => {
     setIsClient(true);
     import("react-date-range").then((mod) => {
-      setRangeComponent(() => mod.DateRange);
+      setDateRangeComponent(() => mod.DateRange);
     });
   }, []);
 
@@ -99,10 +99,10 @@ export default function FilterModal({
       <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl p-6 sm:p-8 relative">
 
         {/* Calendar Popup */}
-        {showCalendar && isClient && RangeComponent && (
+        {showCalendar && isClient && DateRangeComponent && (
           <div className="absolute z-50 top-20 right-6 bg-white shadow-xl p-4 rounded-xl border">
             {calendarMode === "single" ? (
-              <RangeComponent
+              <DateRangeComponent
                 onChange={(item) => applySingleDate(item.selection.startDate)}
                 moveRangeOnFirstSelection={false}
                 ranges={[
@@ -117,7 +117,7 @@ export default function FilterModal({
               />
             ) : (
               <>
-                <RangeComponent
+                <DateRangeComponent
                   onChange={(item) => setRange([item.selection])}
                   moveRangeOnFirstSelection={false}
                   ranges={range}
@@ -135,6 +135,7 @@ export default function FilterModal({
             )}
           </div>
         )}
+
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

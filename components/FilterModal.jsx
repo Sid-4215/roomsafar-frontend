@@ -1,20 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import { FiX, FiMapPin, FiHome, FiUsers, FiDollarSign, FiCalendar } from "react-icons/fi";
-
-// Dynamically load DateRange for client only
-const DateRange = dynamic(
-  () => import("react-date-range").then((mod) => mod.DateRange),
-  { ssr: false }
-);
-
-// Load CSS only on client
-if (typeof window !== "undefined") {
-  import("react-date-range/dist/styles.css");
-  import("react-date-range/dist/theme/default.css");
-}
 
 const DEFAULT_FILTERS = {
   area: "",
@@ -35,6 +22,8 @@ export default function FilterModal({
   const [local, setLocal] = useState({ ...DEFAULT_FILTERS });
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMode, setCalendarMode] = useState("single");
+  const [isClient, setIsClient] = useState(false);
+  const [RangeComponent, setRangeComponent] = useState(null);
 
   const [range, setRange] = useState([
     {
@@ -43,6 +32,22 @@ export default function FilterModal({
       key: "selection",
     },
   ]);
+
+  // Load react-date-range only on client
+  useEffect(() => {
+    setIsClient(true);
+    import("react-date-range").then((mod) => {
+      setRangeComponent(() => mod.DateRange);
+    });
+  }, []);
+
+  // Load CSS only on client
+  useEffect(() => {
+    if (isClient) {
+      import("react-date-range/dist/styles.css");
+      import("react-date-range/dist/theme/default.css");
+    }
+  }, [isClient]);
 
   useEffect(() => {
     if (open) {
@@ -94,10 +99,10 @@ export default function FilterModal({
       <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl p-6 sm:p-8 relative">
 
         {/* Calendar Popup */}
-        {showCalendar && (
+        {showCalendar && isClient && RangeComponent && (
           <div className="absolute z-50 top-20 right-6 bg-white shadow-xl p-4 rounded-xl border">
             {calendarMode === "single" ? (
-              <DateRange
+              <RangeComponent
                 onChange={(item) => applySingleDate(item.selection.startDate)}
                 moveRangeOnFirstSelection={false}
                 ranges={[
@@ -112,7 +117,7 @@ export default function FilterModal({
               />
             ) : (
               <>
-                <DateRange
+                <RangeComponent
                   onChange={(item) => setRange([item.selection])}
                   moveRangeOnFirstSelection={false}
                   ranges={range}
@@ -146,6 +151,7 @@ export default function FilterModal({
           </button>
         </div>
 
+        {/* Rest of your component remains the same */}
         {/* Area */}
         <div className="mb-6">
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
@@ -266,7 +272,6 @@ export default function FilterModal({
             Apply Filters
           </button>
         </div>
-
       </div>
     </div>
   );

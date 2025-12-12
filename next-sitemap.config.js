@@ -4,10 +4,12 @@ const config = {
   generateRobotsTxt: true,
   sitemapSize: 5000,
 
-  exclude: ["/room/server-sitemap.xml", "/room/*"],
+  // ✅ allow Google to crawl room pages
+  exclude: [],
 
+  // Include server-generated dynamic sitemap for rooms
   additionalSitemaps: [
-    "https://roomsafar.com/server-sitemap.xml",
+    "https://roomsafar.com/room/server-sitemap.xml",
   ],
 
   changefreq: "daily",

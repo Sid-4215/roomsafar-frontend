@@ -11,11 +11,9 @@ export async function getServerSideProps(ctx) {
 
   try {
     const res = await fetch(`${API_BASE}/api/rooms/all-ids`);
-    const json = await res.json();
-
-    if (Array.isArray(json)) rooms = json;
-  } catch (e) {
-    console.error("Sitemap fetch error:", e);
+    rooms = await res.json();
+  } catch (error) {
+    console.error("Sitemap fetch error:", error);
     rooms = [];
   }
 

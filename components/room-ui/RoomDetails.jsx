@@ -43,18 +43,49 @@ export default function RoomDetailsUI({
   const [localIndex, setLocalIndex] = useState(currentImageIndex || 0);
   const [customMessage, setCustomMessage] = useState("");
 
+  const safeImages = images.length ? images : ["/no-image.jpg"];
+
+  /** ------------------------------
+   * INSTAGRAM STYLE SWIPE HANDLING
+   * ---------------------------- */
   const [touchStartX, setTouchStartX] = useState(null);
   const [touchEndX, setTouchEndX] = useState(null);
-  const minSwipeDistance = 40;
 
-  const imageRef = useRef(null);
+  const onTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
+  const onTouchMove = (e) => setTouchEndX(e.touches[0].clientX);
 
-  const toIconKey = (value) =>
-    value.toLowerCase().replace(/__/g, "_").replace(/\s+/g, "_");
+  const onTouchEnd = () => {
+    if (!touchStartX || !touchEndX) return;
+    const diff = touchStartX - touchEndX;
 
-  // ⭐ ICON MAP with fallback handling
+    if (diff > 50) setLocalIndex((i) => (i + 1) % safeImages.length);
+    if (diff < -50)
+      setLocalIndex((i) => (i === 0 ? safeImages.length - 1 : i - 1));
+
+    setTouchStartX(null);
+    setTouchEndX(null);
+  };
+
+  /** ------------------------------
+   * DESKTOP → KEYBOARD ARROWS SUPPORT
+   * ---------------------------- */
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === "ArrowRight")
+        setLocalIndex((i) => (i + 1) % safeImages.length);
+      if (e.key === "ArrowLeft")
+        setLocalIndex((i) => (i === 0 ? safeImages.length - 1 : i - 1));
+    };
+
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [safeImages.length]);
+
+  /** ------------------------------
+   * ICON MAP — FEATURES
+   * ---------------------------- */
   const getAmenityIcon = (key) => {
-    const iconMap = {
+    const map = {
       wifi: FiWifi,
       ac: TbAirConditioning,
       geyser: FiDroplet,
@@ -78,9 +109,7 @@ export default function RoomDetailsUI({
       no_alcohol: MdOutlineLiquor,
       no_outsiders: MdSecurity,
     };
-
-    const IconComponent = iconMap[key];
-    return IconComponent || FiHome;
+    return map[key] || FiHome;
   };
 
   const amenityGroups = {
@@ -107,134 +136,111 @@ export default function RoomDetailsUI({
     rules: ["NO_NON_VEG", "NO_SMOKING", "NO_ALCOHOL", "NO_OUTSIDERS"],
   };
 
-  const formatAmenity = (text) =>
-    text.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-
-  const safeImages = images.length ? images : ["/no-image.jpg"];
-
-  const prevImage = () =>
-    setLocalIndex((p) => (p === 0 ? safeImages.length - 1 : p - 1));
-
-  const nextImage = () =>
-    setLocalIndex((p) => (p === safeImages.length - 1 ? 0 : p + 1));
-
-  const onTouchStart = (e) => setTouchStartX(e.targetTouches[0].clientX);
-  const onTouchMove = (e) => setTouchEndX(e.targetTouches[0].clientX);
-
-  const onTouchEnd = () => {
-    if (!touchStartX || !touchEndX) return;
-    const diff = touchStartX - touchEndX;
-
-    if (diff > minSwipeDistance) nextImage();
-    if (diff < -minSwipeDistance) prevImage();
-  };
-
-  useEffect(() => {
-    const area = address.area || "";
-    const city = address.city || "";
-    setCustomMessage(
-      `Hi, I am interested in your ${room?.type || "room"} at ${area}${
-        area && city ? ", " : ""
-      }${city}. Please share more details.`
-    );
-  }, [room]);
-
-  // Check if we have a valid room object
-  if (!room || Object.keys(room).length === 0) {
-    return (
-      <div className="animate-fadeInSlow px-3 sm:px-6 flex justify-center items-center h-64">
-        <div className="text-center">
-          <p className="text-slate-600">Loading room details...</p>
-        </div>
-      </div>
-    );
-  }
+  const formatAmenity = (t) =>
+    t.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
   const formatBHK = (type) => {
-  if (!type) return "Room";
-  const match = type.match(/BHK(\d+)/i);
-  return match ? `${match[1]} BHK` : type;
-};
-
+    if (!type) return "Room";
+    const m = type.match(/BHK(\d+)/i);
+    return m ? `${m[1]} BHK` : type;
+  };
 
   return (
     <div className="animate-fadeInSlow px-3 sm:px-6 flex justify-center">
       <div className="w-full max-w-5xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
-
-          {/* LEFT IMAGES */}
+          
+          {/* ------------------------------------
+           * LEFT SIDE — INSTAGRAM SWIPE GALLERY
+           * ---------------------------------- */}
           <div className="space-y-3">
             <div
-              className="relative rounded-xl overflow-hidden bg-white shadow-sm"
+              className="relative overflow-hidden rounded-xl bg-black"
               onTouchStart={onTouchStart}
               onTouchMove={onTouchMove}
               onTouchEnd={onTouchEnd}
-              ref={imageRef}
             >
-              <img
-                src={safeImages[localIndex]}
-                className="w-full h-[250px] sm:h-[320px] md:h-[360px] lg:h-[420px] object-cover"
-                onClick={() => {
-                  if (room?.id) {
-                    router.push(`/room/${room.id}/gallery?photo=${localIndex}`);
-                  }
+              {/* SLIDER WRAPPER */}
+              <div
+                className="flex transition-transform duration-500 ease-out"
+                style={{
+                  transform: `translateX(-${localIndex * 100}%)`,
+                  width: `${safeImages.length * 100}%`,
                 }}
-                alt="Room"
-              />
+              >
+                {safeImages.map((src, i) => (
+                  <div key={i} className="w-full flex-shrink-0">
+                    <img
+                      src={src}
+                      className="w-full h-[250px] sm:h-[320px] md:h-[360px] lg:h-[420px] object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      onClick={() =>
+                        router.push(`/room/${room.id}/gallery?photo=${localIndex}`)
+                      }
+                      alt="Room"
+                    />
+                  </div>
+                ))}
+              </div>
 
+              {/* DESKTOP ARROWS */}
               {safeImages.length > 1 && (
                 <>
                   <button
-                    onClick={prevImage}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 p-2.5 rounded-full shadow"
-                    aria-label="Previous image"
+                    onClick={() =>
+                      setLocalIndex((i) =>
+                        i === 0 ? safeImages.length - 1 : i - 1
+                      )
+                    }
+                    className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow"
                   >
-                    <FiChevronLeft size={20} />
+                    <FiChevronLeft size={22} />
                   </button>
 
                   <button
-                    onClick={nextImage}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 p-2.5 rounded-full shadow"
-                    aria-label="Next image"
+                    onClick={() =>
+                      setLocalIndex((i) => (i + 1) % safeImages.length)
+                    }
+                    className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow"
                   >
-                    <FiChevronRight size={20} />
+                    <FiChevronRight size={22} />
                   </button>
                 </>
               )}
 
-              <div className="absolute bottom-3 right-3 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
+              {/* IMAGE COUNTER */}
+              <div className="absolute bottom-3 right-3 bg-black/60 text-white px-3 py-1 rounded-full text-xs">
                 {localIndex + 1} / {safeImages.length}
               </div>
             </div>
 
+            {/* THUMBNAILS */}
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
               {safeImages.map((src, i) => (
                 <button
                   key={i}
-                  onClick={() => {
-                    if (room?.id) {
-                      router.push(`/room/${room.id}/gallery?photo=${i}`);
-                    }
-                  }}
+                  onClick={() =>
+                    router.push(`/room/${room.id}/gallery?photo=${i}`)
+                  }
                   className={`overflow-hidden rounded-lg border-2 ${
                     i === localIndex ? "border-purple-600" : "border-transparent"
                   }`}
-                  aria-label={`View image ${i + 1}`}
                 >
-                  <img 
-                    src={src} 
-                    className="w-full h-16 object-cover" 
-                    alt={`Room thumbnail ${i + 1}`} 
+                  <img
+                    src={src}
+                    className="w-full h-16 object-cover"
+                    alt="thumb"
                   />
                 </button>
               ))}
             </div>
           </div>
 
-          {/* RIGHT PANEL */}
+          {/* ------------------------------------
+           * RIGHT PANEL — ROOM DETAILS
+           * ---------------------------------- */}
           <aside className="bg-white p-6 rounded-2xl shadow-sm border">
-
-            {/* Top Info */}
             <div className="flex justify-between items-start mb-4">
               <div>
                 <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
@@ -242,45 +248,45 @@ export default function RoomDetailsUI({
                 </span>
 
                 <h1 className="text-xl font-semibold mt-3">
-                  {room.title || `${formatBHK(room.type)} in ${address.area || ""}`}
+                  {room.title || `${formatBHK(room.type)} in ${address.area}`}
                 </h1>
 
                 <div className="flex items-center gap-2 text-slate-600 mt-2 text-sm">
-                  <FiMapPin /> {address.area || ""}, {address.city || ""}
+                  <FiMapPin /> {address.area}, {address.city}
                 </div>
               </div>
 
               <div className="flex gap-2">
-                <button 
-                  onClick={handleFavorite} 
+                <button
+                  onClick={handleFavorite}
                   className="p-2 rounded-full hover:bg-slate-100"
-                  aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
                 >
-                  <FiHeart className={isFavorite ? "text-red-500" : "text-slate-500"} />
+                  <FiHeart
+                    className={isFavorite ? "text-red-500" : "text-slate-500"}
+                  />
                 </button>
 
-                <button 
-                  onClick={handleShare} 
+                <button
+                  onClick={handleShare}
                   className="p-2 rounded-full hover:bg-slate-100"
-                  aria-label="Share"
                 >
                   <FiShare2 />
                 </button>
               </div>
             </div>
 
-            {/* Price */}
+            {/* RENT */}
             <div className="bg-purple-50 p-4 rounded-xl border mb-5">
               <p className="text-purple-700 text-sm">Monthly rent</p>
               <p className="text-3xl font-bold mt-1">
-                ₹{room.rent?.toLocaleString("en-IN") || "0"}
+                ₹{room.rent?.toLocaleString("en-IN")}
               </p>
               <p className="text-xs text-slate-600 mt-1">
-                + ₹{room.deposit?.toLocaleString("en-IN") || "0"} security deposit
+                + ₹{room.deposit?.toLocaleString("en-IN")} security deposit
               </p>
             </div>
 
-            {/* Quick Info */}
+            {/* QUICK INFO */}
             <div className="grid grid-cols-2 gap-4 mb-5">
               <div className="flex gap-3">
                 <div className="p-2 bg-purple-100 rounded-lg">
@@ -288,7 +294,7 @@ export default function RoomDetailsUI({
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Furnishing</p>
-                  <p className="font-medium">{room.furnished || "Not specified"}</p>
+                  <p className="font-medium">{room.furnished}</p>
                 </div>
               </div>
 
@@ -309,33 +315,35 @@ export default function RoomDetailsUI({
               </div>
             </div>
 
-            {/* Amenities */}
+            {/* AMENITIES */}
             {room.amenities?.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-sm font-medium text-slate-800">Amenities</h3>
 
-                {Object.entries(amenityGroups).map(([groupName, groupItems]) => {
-                  const available = groupItems.filter((a) =>
-                    room.amenities.includes(a)
+                {Object.entries(amenityGroups).map(([groupName, group]) => {
+                  const available = group.filter((x) =>
+                    room.amenities.includes(x)
                   );
-                  if (available.length === 0) return null;
+                  if (!available.length) return null;
 
                   return (
                     <div key={groupName} className="mt-4">
                       <h4
-                        className={`text-xs font-semibold ${
-                          groupName === "rules" ? "text-red-500" : "text-slate-500"
-                        } uppercase`}
+                        className={`text-xs font-semibold uppercase ${
+                          groupName === "rules"
+                            ? "text-red-500"
+                            : "text-slate-500"
+                        }`}
                       >
-                        {groupName.replace(/_/g, " ")}
+                        {groupName}
                       </h4>
 
                       <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {available.map((a, idx) => {
-                          const IconComponent = getAmenityIcon(toIconKey(a));
+                        {available.map((item, idx) => {
+                          const Icon = getAmenityIcon(item.toLowerCase());
                           return (
                             <div key={idx} className="flex items-center gap-3">
-                              <IconComponent
+                              <Icon
                                 className={`text-lg ${
                                   groupName === "rules"
                                     ? "text-red-600"
@@ -349,7 +357,7 @@ export default function RoomDetailsUI({
                                     : "text-slate-700"
                                 }`}
                               >
-                                {formatAmenity(a)}
+                                {formatAmenity(item)}
                               </span>
                             </div>
                           );
@@ -361,7 +369,7 @@ export default function RoomDetailsUI({
               </div>
             )}
 
-            {/* Description */}
+            {/* DESCRIPTION */}
             <div className="mt-6">
               <h3 className="text-sm font-medium text-slate-800">Description</h3>
               <p className="text-sm text-slate-700 mt-1 whitespace-pre-line">

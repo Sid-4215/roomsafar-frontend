@@ -9,16 +9,16 @@ import RoomCard from "../components/room-ui/RoomCard";
 import AnimatedSearch from "../components/search/AnimatedSearch";
 import RoomCardSkeleton from "../components/room-ui/RoomCardSkeleton";
 
-import { roomsAPI } from "../services/api";
-
 import { FiFilter, FiLoader } from "react-icons/fi";
 import toast from "react-hot-toast";
 
-const DynamicFilterModal = dynamic(() => import("../components/FilterModal.jsx"), {
-  ssr: false,
-  loading: () => null,
-});
+/* ---------------- Dynamic Imports ---------------- */
+const DynamicFilterModal = dynamic(
+  () => import("../components/FilterModal.jsx"),
+  { ssr: false }
+);
 
+/* ---------------- Page ---------------- */
 export default function Rooms({ initialRooms, initialTotal }) {
   const router = useRouter();
   const loadMoreRef = useRef(null);
@@ -36,66 +36,64 @@ export default function Rooms({ initialRooms, initialTotal }) {
   const [filters, setFilters] = useState({});
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const areaSEO = useMemo(() => (filters.area ? ` in ${filters.area}` : ""), [filters.area]);
-  const title = `Rooms${areaSEO} in Pune | Roomsafar`;
-  const desc = `Browse verified rooms${areaSEO}. No brokerage, real photos, owner contact.`;
+  /* ---------------- SEO ---------------- */
+  const areaSEO = useMemo(
+    () => (filters.area ? ` in ${filters.area}` : ""),
+    [filters.area]
+  );
 
-  /* -------------------------------------------
-   🔥 Correct Sorting Logic
-  ------------------------------------------- */
+  const seoTitle = `Rooms${areaSEO} in Pune | Roomsafar`;
+  const seoDesc = `Browse verified rooms${areaSEO} in Pune. No brokerage, real photos, direct owner contact.`;
+
+  /* ---------------- Sorting ---------------- */
   const getSortParams = useCallback((s) => {
     if (s === "rent") return { sortField: "rent", sortDirection: "ASC" };
     if (s === "rentDesc") return { sortField: "rent", sortDirection: "DESC" };
     return { sortField: "createdAt", sortDirection: "DESC" };
   }, []);
 
-  /* -------------------------------------------
-   🔥 Smooth, Optimized Fetch Function
-  ------------------------------------------- */
+  /* ---------------- Fetch Rooms ---------------- */
   const fetchRooms = useCallback(
-    async (newFilters = {}, reset = false, newPage = 0, newSortBy = sortBy) => {
+    async (newFilters = {}, reset = false, newPage = 0, newSort = sortBy) => {
       const merged = { ...filters, ...newFilters };
-      const { sortField, sortDirection } = getSortParams(newSortBy);
+      const { sortField, sortDirection } = getSortParams(newSort);
 
-      if (reset) {
-        setLoading(true);
-        setPage(0);
-      } else {
-        setLoadingMore(true);
-      }
+      reset ? setLoading(true) : setLoadingMore(true);
 
       try {
-        const params = {
+        const params = new URLSearchParams({
           page: reset ? 0 : newPage,
           size: 20,
           sortBy: sortField,
           sortDir: sortDirection,
           ...merged,
-        };
+        });
 
-        const data = await roomsAPI.searchRooms(params);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE}/api/rooms/search?${params}`
+        );
+
+        if (!res.ok) throw new Error("Failed");
+
+        const data = await res.json();
         const newData = data?.content || [];
 
-        if (reset) {
-          setRooms(newData);
-          window.scrollTo({ top: 240, behavior: "smooth" });
-        } else {
-          setRooms((prev) => [...prev, ...newData]);
-        }
+        reset
+          ? setRooms(newData)
+          : setRooms((prev) => [...prev, ...newData]);
 
         setHasMore(newData.length === 20);
         setTotalResults(data.totalElements || 0);
         setFilters(merged);
 
-        // URL update
         const q = new URLSearchParams();
         Object.entries(merged).forEach(([k, v]) => v && q.set(k, v));
-        q.set("sort", newSortBy);
+        q.set("sort", newSort);
+        router.replace(`/rooms?${q.toString()}`, undefined, { shallow: true });
 
-        router.replace(`/rooms?${q.toString()}`);
-
-      } catch (err) {
-        toast.error("Failed to load rooms.");
+        if (reset) window.scrollTo({ top: 240, behavior: "smooth" });
+      } catch {
+        toast.error("Failed to load rooms");
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -104,19 +102,15 @@ export default function Rooms({ initialRooms, initialTotal }) {
     [filters, sortBy, getSortParams, router]
   );
 
-  /* -------------------------------------------
-   🔥 Lag-Free Infinite Scroll
-  ------------------------------------------- */
+  /* ---------------- Infinite Scroll ---------------- */
   useEffect(() => {
     if (!hasMore || loadingMore) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
+      ([entry]) => {
+        if (entry.isIntersecting) {
           const next = page + 1;
           setPage(next);
-
-          // IMPORTANT FIX
           fetchRooms({}, false, next, sortBy);
         }
       },
@@ -125,22 +119,35 @@ export default function Rooms({ initialRooms, initialTotal }) {
 
     const el = loadMoreRef.current;
     if (el) observer.observe(el);
-
     return () => el && observer.unobserve(el);
   }, [hasMore, loadingMore, page, fetchRooms, sortBy]);
 
-
-  /* -------------------------------------------
-   🚀 Component Rendering
-  ------------------------------------------- */
+  /* ---------------- Render ---------------- */
   return (
     <>
+      {/* ================= SEO HEAD ================= */}
       <Head>
-        <title>{title}</title>
-        <meta name="description" content={desc} />
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDesc} />
         <link rel="canonical" href="https://roomsafar.com/rooms" />
 
-        {/* Image optimization */}
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDesc} />
+        <meta property="og:image" content="https://roomsafar.com/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:url" content="https://roomsafar.com/rooms" />
+        <meta property="og:site_name" content="Roomsafar" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDesc} />
+        <meta name="twitter:image" content="https://roomsafar.com/og-image.png" />
+
+        {/* Image CDN */}
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
       </Head>
@@ -149,9 +156,8 @@ export default function Rooms({ initialRooms, initialTotal }) {
         <Navbar />
 
         <main className="max-w-7xl mx-auto px-2 sm:px-6 pt-6 pb-20">
-
-          {/* Search Bar */}
-          <div className="sticky top-[88px] z-40 w-full px-1 sm:px-4">
+          {/* Search */}
+          <div className="sticky top-[88px] z-40">
             <AnimatedSearch
               initialArea={filters.area || ""}
               onSearch={(area) => fetchRooms({ area }, true)}
@@ -159,10 +165,14 @@ export default function Rooms({ initialRooms, initialTotal }) {
           </div>
 
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 mt-4">
+          <div className="flex flex-col sm:flex-row justify-between gap-4 my-6">
             <div>
-              <h1 className="text-3xl font-bold">Rooms{areaSEO} in Pune</h1>
-              <p className="text-slate-600">Found {totalResults.toLocaleString()} rooms</p>
+              <h1 className="text-3xl font-bold">
+                Rooms{areaSEO} in Pune
+              </h1>
+              <p className="text-slate-600">
+                Found {totalResults.toLocaleString()} rooms
+              </p>
             </div>
 
             <div className="flex gap-3">
@@ -173,7 +183,6 @@ export default function Rooms({ initialRooms, initialTotal }) {
                 <FiFilter /> Filters
               </button>
 
-              {/* Sorting */}
               <select
                 value={sortBy}
                 onChange={(e) => {
@@ -191,28 +200,28 @@ export default function Rooms({ initialRooms, initialTotal }) {
 
           {/* Skeleton */}
           {loading && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 mb-10">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, i) => (
                 <RoomCardSkeleton key={i} />
               ))}
             </div>
           )}
 
-          {/* Room Cards */}
+          {/* Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {rooms.map((room) => (
-              <RoomCard key={`room-${room.id}`} room={room} />
+              <RoomCard key={room.id} room={room} />
             ))}
           </div>
 
-          {/* Infinite Scroll Trigger */}
+          {/* Load More */}
           {hasMore && (
             <div ref={loadMoreRef} className="mt-12 text-center">
-              <button className="px-8 py-3 bg-white border rounded-xl" disabled={loadingMore}>
+              <button className="px-8 py-3 bg-white border rounded-xl">
                 {loadingMore ? (
-                  <div className="flex items-center justify-center gap-2">
+                  <span className="flex items-center gap-2 justify-center">
                     <FiLoader className="animate-spin" /> Loading...
-                  </div>
+                  </span>
                 ) : (
                   "Load More"
                 )}
@@ -221,7 +230,6 @@ export default function Rooms({ initialRooms, initialTotal }) {
           )}
         </main>
 
-        {/* Modal */}
         <DynamicFilterModal
           open={filtersOpen}
           onClose={() => setFiltersOpen(false)}
@@ -235,14 +243,21 @@ export default function Rooms({ initialRooms, initialTotal }) {
   );
 }
 
+/* ---------------- SSR (CRITICAL) ---------------- */
 export async function getServerSideProps() {
   try {
-    const data = await roomsAPI.searchRooms({ page: 0, size: 20 });
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE}/api/rooms/search?page=0&size=20`
+    );
+
+    if (!res.ok) throw new Error();
+
+    const data = await res.json();
 
     return {
       props: {
-        initialRooms: data?.content || [],
-        initialTotal: data?.totalElements || 0,
+        initialRooms: data.content || [],
+        initialTotal: data.totalElements || 0,
       },
     };
   } catch {
@@ -251,3 +266,5 @@ export async function getServerSideProps() {
     };
   }
 }
+
+Rooms.disableDefaultSEO = true;

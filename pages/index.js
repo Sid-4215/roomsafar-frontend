@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import SEO from "../components/SEO";
+import Head from "next/head";
+// import SEO from "../components/SEO";
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
 import Footer from "../components/Footer";
@@ -46,7 +47,8 @@ export default function Home() {
   useEffect(() => {
     const fetchFeaturedRooms = async () => {
       try {
-        const data = await roomsAPI.getFeaturedRooms();
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/rooms/featured`);
+        const data = await res.json();
         let roomsArray = [];
 
         if (Array.isArray(data)) roomsArray = data;
@@ -68,26 +70,37 @@ export default function Home() {
   return (
     <>
       {/* SEO */}
-      <SEO
-        title="Roomsafar – Rooms, PG, Flats & Shared Rooms in Pune | No Brokerage"
-        description="Find verified rooms, PGs & shared flats in Pune. No brokerage, direct owner contact, real photos."
-        url="https://roomsafar.com/"
-      />
+      <Head>
+        <title>Roomsafar – Rooms, PG, Flats & Shared Rooms in Pune | No Brokerage</title>
+        <meta
+          name="description"
+          content="Find verified rooms, PGs & shared flats in Pune. No brokerage, direct owner contact, real photos."
+        />
+        <link rel="canonical" href="https://roomsafar.com/" />
 
-      {/* JSON-LD */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            name: "Roomsafar",
-            url: "https://roomsafar.com",
-            description:
-              "Find verified rooms and PGs in Pune with no brokerage and direct owner contact.",
-          }),
-        }}
-      />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Roomsafar – Rooms, PG, Flats & Shared Rooms in Pune | No Brokerage" />
+        <meta property="og:description" content="Find verified rooms, PGs & shared flats in Pune. No brokerage, direct owner contact, real photos." />
+        <meta property="og:image" content="https://roomsafar.com/og-image.png" />
+        <meta property="og:url" content="https://roomsafar.com/" />
+        <meta property="og:site_name" content="Roomsafar" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "Roomsafar",
+              url: "https://roomsafar.com",
+              description:
+                "Find verified rooms and PGs in Pune with no brokerage and direct owner contact.",
+            }),
+          }}
+        />
+      </Head>
 
       {/* =============================== */}
       {/*            UI START             */}
@@ -244,3 +257,6 @@ export default function Home() {
     </>
   );
 }
+
+Home.disableDefaultSEO = true;
+

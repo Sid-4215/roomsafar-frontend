@@ -18,23 +18,134 @@ const DynamicFilterModal = dynamic(
   { ssr: false }
 );
 
+// Debounce function
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
+
 /* ---------------- Page ---------------- */
 export default function Rooms({ initialRooms, initialTotal }) {
   const router = useRouter();
   const loadMoreRef = useRef(null);
+  const isInitialMount = useRef(true);
+  const hasRestoredState = useRef(false);
+  const lastSaveTime = useRef(Date.now());
 
-  const [rooms, setRooms] = useState(initialRooms);
-  const [totalResults, setTotalResults] = useState(initialTotal);
+  const [rooms, setRooms] = useState([]);
+  const [totalResults, setTotalResults] = useState(0);
 
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(initialRooms.length === 20);
+  const [hasMore, setHasMore] = useState(false);
 
   const [sortBy, setSortBy] = useState(router.query.sort || "createdAt");
   const [filters, setFilters] = useState({});
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  /* ---------------- State Management ---------------- */
+  const saveStateToStorage = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Only save if we have rooms loaded
+    if (rooms.length === 0) return;
+    
+    // Throttle saves to avoid performance issues
+    const now = Date.now();
+    if (now - lastSaveTime.current < 1000) return;
+    lastSaveTime.current = now;
+    
+    try {
+      const state = {
+        rooms,
+        totalResults,
+        page,
+        hasMore,
+        sortBy,
+        filters,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('roomsState', JSON.stringify(state));
+      localStorage.setItem('roomsScrollPosition', window.scrollY.toString());
+    } catch (error) {
+      console.warn('Failed to save state to localStorage:', error);
+    }
+  }, [rooms, totalResults, page, hasMore, sortBy, filters]);
+
+  const restoreStateFromStorage = useCallback(() => {
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      const savedState = localStorage.getItem('roomsState');
+      const savedScroll = localStorage.getItem('roomsScrollPosition');
+      
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        const stateAge = Date.now() - parsedState.timestamp;
+        
+        // Only restore if state is less than 5 minutes old
+        if (stateAge < 5 * 60 * 1000) {
+          setRooms(parsedState.rooms || []);
+          setTotalResults(parsedState.totalResults || 0);
+          setPage(parsedState.page || 0);
+          setHasMore(parsedState.hasMore || false);
+          setSortBy(parsedState.sortBy || "createdAt");
+          setFilters(parsedState.filters || {});
+          hasRestoredState.current = true;
+          
+          // Restore scroll position after a short delay
+          if (savedScroll) {
+            setTimeout(() => {
+              window.scrollTo({ top: parseInt(savedScroll), behavior: 'instant' });
+            }, 100);
+          }
+          return true;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to restore state from localStorage:', error);
+    }
+    return false;
+  }, []);
+
+  /* ---------------- Initialize State ---------------- */
+  useEffect(() => {
+    if (isInitialMount.current) {
+      const restored = restoreStateFromStorage();
+      if (!restored) {
+        // If no saved state, use initial props
+        setRooms(initialRooms);
+        setTotalResults(initialTotal);
+        setHasMore(initialRooms.length === 20);
+      }
+      isInitialMount.current = false;
+    }
+  }, [initialRooms, initialTotal, restoreStateFromStorage]);
+
+  /* ---------------- Auto-save State ---------------- */
+  useEffect(() => {
+    const debouncedSave = debounce(saveStateToStorage, 1000);
+    debouncedSave();
+  }, [rooms, totalResults, page, hasMore, sortBy, filters, saveStateToStorage]);
+
+  /* ---------------- Handle Page Unload ---------------- */
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      saveStateToStorage();
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saveStateToStorage]);
 
   /* ---------------- SEO ---------------- */
   const areaSEO = useMemo(
@@ -121,6 +232,46 @@ export default function Rooms({ initialRooms, initialTotal }) {
     if (el) observer.observe(el);
     return () => el && observer.unobserve(el);
   }, [hasMore, loadingMore, page, fetchRooms, sortBy]);
+
+  /* ---------------- Handle Card Click ---------------- */
+  const handleCardClick = useCallback((roomId) => {
+    // Save current state before navigation
+    saveStateToStorage();
+    
+    // Add a small delay to ensure state is saved
+    setTimeout(() => {
+      router.push(`/room/${roomId}`);
+    }, 50);
+  }, [router, saveStateToStorage]);
+
+  /* ---------------- Handle Back Button ---------------- */
+  useEffect(() => {
+    const handlePopState = () => {
+      // When back button is pressed, restore state
+      setTimeout(() => {
+        if (!hasRestoredState.current) {
+          restoreStateFromStorage();
+        }
+      }, 100);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [restoreStateFromStorage]);
+
+  /* ---------------- Clear Saved State on Manual Refresh ---------------- */
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // If user presses F5 or Ctrl+R, clear saved state
+      if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+        localStorage.removeItem('roomsState');
+        localStorage.removeItem('roomsScrollPosition');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   /* ---------------- Render ---------------- */
   return (
@@ -210,7 +361,9 @@ export default function Rooms({ initialRooms, initialTotal }) {
           {/* Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {rooms.map((room) => (
-              <RoomCard key={room.id} room={room} />
+              <div key={room.id} onClick={() => handleCardClick(room.id)}>
+                <RoomCard room={room} />
+              </div>
             ))}
           </div>
 

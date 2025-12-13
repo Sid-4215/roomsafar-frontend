@@ -30,9 +30,30 @@ export default memo(function RoomCard({ room }) {
     return type;
   };
 
+  const handleClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Save current scroll position
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('roomsScrollPosition', window.scrollY.toString());
+      
+      // Save room click for analytics if needed
+      const clickData = {
+        roomId: room.id,
+        timestamp: Date.now(),
+        scrollPosition: window.scrollY
+      };
+      sessionStorage.setItem('lastRoomClick', JSON.stringify(clickData));
+    }
+    
+    // Use shallow routing if possible
+    router.push(`/room/${room.id}`, undefined, { shallow: false });
+  };
+
   return (
     <div
-      onClick={() => router.push(`/room/${room.id}`)}
+      onClick={handleClick}
       className="
         group
         bg-white/90 
@@ -40,8 +61,9 @@ export default memo(function RoomCard({ room }) {
         rounded-3xl overflow-hidden 
         shadow-[0_8px_25px_rgba(0,0,0,0.08)]
         hover:shadow-[0_12px_40px_rgba(0,0,0,0.14)]
-        transition-transform duration-500 
-        hover:-translate-y-2 cursor-pointer
+        transition-all duration-300
+        hover:-translate-y-1 cursor-pointer
+        active:scale-[0.98]
 
         /* GPU acceleration + reduced scroll jank */
         will-change-transform
@@ -52,7 +74,7 @@ export default memo(function RoomCard({ room }) {
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl">
         <Image
           src={imgError ? "/no-image.jpg" : img}
-          alt="room"
+          alt={`Room in ${area}, ${city}`}
           fill
           loading="lazy"
           sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
@@ -115,6 +137,10 @@ export default memo(function RoomCard({ room }) {
             bg-white/90 p-2 
             rounded-full shadow-md hover:bg-white transition
           "
+          onClick={(e) => {
+            e.stopPropagation();
+            // Handle favorite logic here
+          }}
         >
           <FiHeart size={20} className="text-slate-700" />
         </div>

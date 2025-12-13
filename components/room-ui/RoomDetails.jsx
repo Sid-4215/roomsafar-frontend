@@ -22,6 +22,7 @@ import {
   FiPhone,
   FiBook,
   FiCoffee,
+  FiLoader,
 } from "react-icons/fi";
 
 import {
@@ -53,6 +54,99 @@ import { Ri24HoursLine, RiWifiLine } from "react-icons/ri";
 
 import { useRouter } from "next/navigation";
 
+// Define amenity icon mapping outside component to avoid re-renders
+const amenityIcons = {
+  // Direct mappings
+  "WIFI": FiWifi,
+  "AC": TbAirConditioning,
+  "GEYSER": LuFlame,
+  "WASHING_MACHINE": GiWashingMachine,
+  "REFRIGERATOR": FaRegSnowflake,
+  "MICROWAVE": TbMicrowave,
+  "TV": FiTv,
+  "CUPBOARD": LuArmchair,
+  "LIFT": MdOutlineElevator,
+  "PARKING": MdOutlineLocalParking,
+  "SECURITY": FaShieldAlt,
+  "CCTV": FaCctv,
+  "HOUSEKEEPING": MdOutlineLocalLaundryService,
+  "ATTACHED_BATHROOM": IoWaterOutline,
+  "BALCONY": MdDeck,
+  "STUDY_TABLE": TbTable,
+  "WATER_PURIFIER": FiDroplet,
+  "INVERTER": BsLightningCharge,
+  "NO_NON_VEG": MdOutlineNoFood,
+  "NO_SMOKING": MdOutlineSmokeFree,
+  "NO_ALCOHOL": MdOutlineLiquor,
+  "NO_OUTSIDERS": FiUser,
+  "WATER_HEATER": LuFlame,
+  "WIFI_INTERNET": RiWifiLine,
+  "24_HOUR_WATER": Ri24HoursLine,
+  "LIBRARY": FiBook,
+  "MESS": MdRestaurant,
+  "GYM": MdFitnessCenter,
+  "INTERNET": RiWifiLine,
+  "BROADBAND": RiWifiLine,
+  "HOT_WATER": LuFlame,
+  "COLD_WATER": FiDroplet,
+  "FAN": IoSpeedometer,
+  "BED": FiHome,
+  "MATTRESS": FiHome,
+  "PILLOW": FiHome,
+  "CURTAINS": FiHome,
+  "LIGHTS": FiHome,
+  "POWER": BsLightningCharge,
+  "ELECTRICITY": BsLightningCharge,
+  "COOKING": FiCoffee,
+  "KITCHEN": FiCoffee,
+  "GAS": FiHome,
+  "STOVE": FiCoffee,
+  "GYMNASIUM": MdFitnessCenter,
+  "SWIMMING_POOL": FiHome,
+  "POOL": FiHome,
+  "GARDEN": FiHome,
+  "LAUNDRY": MdOutlineLocalLaundryService,
+  "DRYER": MdOutlineLocalLaundryService,
+  "IRON": MdOutlineLocalLaundryService,
+  "DTH": FiTv,
+  "SET_TOP_BOX": FiTv,
+  "MUSIC": FiHome,
+  "SPEAKER": FiHome,
+  "HEATING": LuFlame,
+  "COOLING": TbAirConditioning,
+  "VENTILATION": IoSpeedometer,
+  "EXHAUST": IoSpeedometer,
+  "WATER_SUPPLY": BiWater,
+  "ROUND_THE_CLOCK_WATER": Ri24HoursLine,
+  "CONTINUOUS_WATER": Ri24HoursLine,
+  "READING_ROOM": FiBook,
+  "BOOKS": FiBook,
+  "FOOD": MdRestaurant,
+  "CAFETERIA": MdRestaurant,
+  "DINING": MdRestaurant,
+  
+  // Additional common amenities
+  "BHK": FiHome,
+  "ROOM": FiHome,
+  "SHARED": FiUsers,
+  "PRIVATE": FiUser,
+  "BOYS": FiUser,
+  "GIRLS": FiUser,
+  "ANYONE": FiUsers,
+  "FURNISHED": LuArmchair,
+  "SEMI_FURNISHED": LuArmchair,
+  "UNFURNISHED": LuArmchair,
+  "MAINTENANCE": FiHome,
+  "RENT": FiHome,
+  "DEPOSIT": FiHome,
+  "BROKERAGE": FiUser,
+  "NO_BROKERAGE": FiCheck,
+  "VERIFIED": MdVerified,
+  "AVAILABLE": FiCheck,
+  "BOOKED": FiCalendar,
+  "VACANT": FiHome,
+};
+
 export default function RoomDetailsUI({
   room = {},
   images = [],
@@ -64,7 +158,6 @@ export default function RoomDetailsUI({
 }) {
   const router = useRouter();
   const touchAreaRef = useRef(null);
-  const detailsRef = useRef(null);
   
   // Extract address from room object
   const address = room?.address || {
@@ -78,7 +171,7 @@ export default function RoomDetailsUI({
   // Extract images from room object if not provided as prop
   const roomImages = images.length > 0 ? images : room?.images || [];
   
-  // Transform image objects to URLs array
+  // Transform image objects to URLs array - SIMPLIFIED
   const imageUrls = useMemo(() => {
     if (!roomImages || roomImages.length === 0) return ["/no-image.jpg"];
     
@@ -93,16 +186,33 @@ export default function RoomDetailsUI({
     return ["/no-image.jpg"];
   }, [roomImages]);
 
-  // States
+  // States - SIMPLIFIED
   const [localIndex, setLocalIndex] = useState(currentImageIndex || 0);
   const [touchStartX, setTouchStartX] = useState(null);
-  const [imageLoaded, setImageLoaded] = useState({});
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [liked, setLiked] = useState(isFavorite);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const [showContactSheet, setShowContactSheet] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [currentImageLoaded, setCurrentImageLoaded] = useState(false);
 
-  // Touch handlers
+  // Check if mobile on mount and resize - SIMPLIFIED
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Reset image loaded state when image changes
+  useEffect(() => {
+    setCurrentImageLoaded(false);
+  }, [localIndex]);
+
+  // Touch handlers - FIXED
   const handleTouchStart = useCallback((e) => {
     if (!e.touches?.length) return;
     setTouchStartX(e.touches[0].clientX);
@@ -136,196 +246,124 @@ export default function RoomDetailsUI({
   }, [currentImageIndex]);
 
   // Image load handler
-  const handleImageLoad = (index) => {
-    setImageLoaded((prev) => ({ ...prev, [index]: true }));
+  const handleImageLoad = () => {
+    setCurrentImageLoaded(true);
   };
 
-  // Amenity icon mapping
-  const getAmenityIcon = (key) => {
-    const exactMap = {
-      "WIFI": FiWifi,
-      "AC": TbAirConditioning,
-      "GEYSER": LuFlame,
-      "WASHING_MACHINE": GiWashingMachine,
-      "REFRIGERATOR": FaRegSnowflake,
-      "MICROWAVE": TbMicrowave,
-      "TV": FiTv,
-      "CUPBOARD": LuArmchair,
-      "LIFT": MdOutlineElevator,
-      "PARKING": MdOutlineLocalParking,
-      "SECURITY": FaShieldAlt,
-      "CCTV": FaCctv,
-      "HOUSEKEEPING": MdOutlineLocalLaundryService,
-      "ATTACHED_BATHROOM": IoWaterOutline,
-      "BALCONY": MdDeck,
-      "STUDY_TABLE": TbTable,
-      "WATER_PURIFIER": FiDroplet,
-      "INVERTER": BsLightningCharge,
-      "NO_NON_VEG": MdOutlineNoFood,
-      "NO_SMOKING": MdOutlineSmokeFree,
-      "NO_ALCOHOL": MdOutlineLiquor,
-      "NO_OUTSIDERS": FiUser,
-      "WATER_HEATER": LuFlame,
-      "WIFI_INTERNET": RiWifiLine,
-      "24_HOUR_WATER": Ri24HoursLine,
-      "LIBRARY": FiBook,
-      "MESS": MdRestaurant,
-      "GYM": MdFitnessCenter,
-      "INTERNET": RiWifiLine,
-      "BROADBAND": RiWifiLine,
-      "HOT_WATER": LuFlame,
-      "COLD_WATER": FiDroplet,
-      "FAN": IoSpeedometer,
-      "BED": FiHome,
-      "MATTRESS": FiHome,
-      "PILLOW": FiHome,
-      "CURTAINS": FiHome,
-      "LIGHTS": FiHome,
-      "POWER": BsLightningCharge,
-      "ELECTRICITY": BsLightningCharge,
-      "COOKING": FiCoffee,
-      "KITCHEN": FiCoffee,
-      "GAS": FiHome,
-      "STOVE": FiCoffee,
-      "GYMNASIUM": MdFitnessCenter,
-      "SWIMMING_POOL": FiHome,
-      "POOL": FiHome,
-      "GARDEN": FiHome,
-      "LAUNDRY": MdOutlineLocalLaundryService,
-      "DRYER": MdOutlineLocalLaundryService,
-      "IRON": MdOutlineLocalLaundryService,
-      "DTH": FiTv,
-      "SET_TOP_BOX": FiTv,
-      "MUSIC": FiHome,
-      "SPEAKER": FiHome,
-      "HEATING": LuFlame,
-      "COOLING": TbAirConditioning,
-      "VENTILATION": IoSpeedometer,
-      "EXHAUST": IoSpeedometer,
-      "WATER_SUPPLY": BiWater,
-      "ROUND_THE_CLOCK_WATER": Ri24HoursLine,
-      "CONTINUOUS_WATER": Ri24HoursLine,
-      "READING_ROOM": FiBook,
-      "BOOKS": FiBook,
-      "FOOD": MdRestaurant,
-      "CAFETERIA": MdRestaurant,
-      "DINING": MdRestaurant,
-    };
+  // Amenity icon mapping - FIXED VERSION
+  const getAmenityIcon = useCallback((key) => {
+    if (!key) return FiHome;
     
-    if (exactMap[key]) {
-      return exactMap[key];
+    // Convert key to uppercase for matching
+    const upperKey = key.toUpperCase().trim();
+    
+    // First try exact match
+    if (amenityIcons[upperKey]) {
+      return amenityIcons[upperKey];
     }
     
+    // Try partial matches for common patterns
     const keyLower = key.toLowerCase().trim();
-    const keywordMap = {
-      "wifi": FiWifi,
-      "internet": RiWifiLine,
-      "wi-fi": RiWifiLine,
-      "ac": TbAirConditioning,
-      "air conditioner": TbAirConditioning,
-      "air conditioning": TbAirConditioning,
-      "geyser": LuFlame,
-      "water heater": LuFlame,
-      "heater": LuFlame,
-      "washing machine": GiWashingMachine,
-      "washing": GiWashingMachine,
-      "refrigerator": FaRegSnowflake,
-      "fridge": FaRegSnowflake,
-      "microwave": TbMicrowave,
-      "tv": FiTv,
-      "television": FiTv,
-      "cupboard": LuArmchair,
-      "wardrobe": LuArmchair,
-      "storage": LuArmchair,
-      "lift": MdOutlineElevator,
-      "elevator": MdOutlineElevator,
-      "parking": MdOutlineLocalParking,
-      "car parking": MdOutlineLocalParking,
-      "security": FaShieldAlt,
-      "cctv": FaCctv,
-      "housekeeping": MdOutlineLocalLaundryService,
-      "maid": MdOutlineLocalLaundryService,
-      "cleaning": MdOutlineLocalLaundryService,
-      "attached bathroom": IoWaterOutline,
-      "private bathroom": IoWaterOutline,
-      "bathroom": IoWaterOutline,
-      "balcony": MdDeck,
-      "study table": TbTable,
-      "desk": TbTable,
-      "water purifier": FiDroplet,
-      "purifier": FiDroplet,
-      "inverter": BsLightningCharge,
-      "power backup": BsLightningCharge,
-      "generator": BsLightningCharge,
-      "no non veg": MdOutlineNoFood,
-      "no non-veg": MdOutlineNoFood,
-      "vegetarian": MdOutlineNoFood,
-      "no smoking": MdOutlineSmokeFree,
-      "smoke free": MdOutlineSmokeFree,
-      "no alcohol": MdOutlineLiquor,
-      "alcohol free": MdOutlineLiquor,
-      "no outsiders": FiUser,
-      "restricted entry": FiUser,
-      "24 hour": Ri24HoursLine,
-      "24 hours": Ri24HoursLine,
-      "24/7": Ri24HoursLine,
-      "24x7": Ri24HoursLine,
-      "continuous": Ri24HoursLine,
-      "round the clock": Ri24HoursLine,
-      "library": FiBook,
-      "reading": FiBook,
-      "books": FiBook,
-      "water": BiWater,
-      "water supply": BiWater,
-      "hot water": LuFlame,
-      "cold water": FiDroplet,
-      "fan": IoSpeedometer,
-      "bed": FiHome,
-      "mattress": FiHome,
-      "pillow": FiHome,
-      "curtains": FiHome,
-      "lights": FiHome,
-      "power": BsLightningCharge,
-      "electricity": BsLightningCharge,
-      "cooking": FiCoffee,
-      "kitchen": FiCoffee,
-      "gas": FiHome,
-      "stove": FiCoffee,
-      "gym": MdFitnessCenter,
-      "gymnasium": MdFitnessCenter,
-      "fitness": MdFitnessCenter,
-      "workout": MdFitnessCenter,
-      "swimming pool": FiHome,
-      "pool": FiHome,
-      "garden": FiHome,
-      "laundry": MdOutlineLocalLaundryService,
-      "dryer": MdOutlineLocalLaundryService,
-      "iron": MdOutlineLocalLaundryService,
-      "broadband": RiWifiLine,
-      "dth": FiTv,
-      "set top box": FiTv,
-      "music": FiHome,
-      "speaker": FiHome,
-      "heating": LuFlame,
-      "cooling": TbAirConditioning,
-      "ventilation": IoSpeedometer,
-      "exhaust": IoSpeedometer,
-      "mess": MdRestaurant,
-      "food": MdRestaurant,
-      "cafeteria": MdRestaurant,
-      "dining": MdRestaurant,
-    };
     
-    for (const [keyword, icon] of Object.entries(keywordMap)) {
-      if (keyLower.includes(keyword)) {
-        return icon;
+    // Common keyword patterns
+    if (keyLower.includes('wifi') || keyLower.includes('internet')) {
+      return FiWifi;
+    }
+    if (keyLower.includes('ac') || keyLower.includes('air condition')) {
+      return TbAirConditioning;
+    }
+    if (keyLower.includes('geyser') || keyLower.includes('water heater') || keyLower.includes('heater')) {
+      return LuFlame;
+    }
+    if (keyLower.includes('washing')) {
+      return GiWashingMachine;
+    }
+    if (keyLower.includes('fridge') || keyLower.includes('refrigerator')) {
+      return FaRegSnowflake;
+    }
+    if (keyLower.includes('microwave')) {
+      return TbMicrowave;
+    }
+    if (keyLower.includes('tv') || keyLower.includes('television')) {
+      return FiTv;
+    }
+    if (keyLower.includes('cupboard') || keyLower.includes('wardrobe') || keyLower.includes('storage')) {
+      return LuArmchair;
+    }
+    if (keyLower.includes('lift') || keyLower.includes('elevator')) {
+      return MdOutlineElevator;
+    }
+    if (keyLower.includes('parking')) {
+      return MdOutlineLocalParking;
+    }
+    if (keyLower.includes('security')) {
+      return FaShieldAlt;
+    }
+    if (keyLower.includes('cctv')) {
+      return FaCctv;
+    }
+    if (keyLower.includes('housekeeping') || keyLower.includes('cleaning')) {
+      return MdOutlineLocalLaundryService;
+    }
+    if (keyLower.includes('bathroom') || keyLower.includes('toilet')) {
+      return IoWaterOutline;
+    }
+    if (keyLower.includes('balcony')) {
+      return MdDeck;
+    }
+    if (keyLower.includes('study') || keyLower.includes('desk')) {
+      return TbTable;
+    }
+    if (keyLower.includes('water purifier') || keyLower.includes('purifier')) {
+      return FiDroplet;
+    }
+    if (keyLower.includes('inverter') || keyLower.includes('power backup')) {
+      return BsLightningCharge;
+    }
+    if (keyLower.includes('no ') || keyLower.includes('restrict')) {
+      if (keyLower.includes('non veg') || keyLower.includes('non-veg')) {
+        return MdOutlineNoFood;
+      }
+      if (keyLower.includes('smok')) {
+        return MdOutlineSmokeFree;
+      }
+      if (keyLower.includes('alcohol')) {
+        return MdOutlineLiquor;
+      }
+      if (keyLower.includes('outsider')) {
+        return FiUser;
       }
     }
+    if (keyLower.includes('24') || keyLower.includes('round the clock')) {
+      return Ri24HoursLine;
+    }
+    if (keyLower.includes('library') || keyLower.includes('book')) {
+      return FiBook;
+    }
+    if (keyLower.includes('mess') || keyLower.includes('food') || keyLower.includes('dining')) {
+      return MdRestaurant;
+    }
+    if (keyLower.includes('gym') || keyLower.includes('fitness')) {
+      return MdFitnessCenter;
+    }
+    if (keyLower.includes('fan')) {
+      return IoSpeedometer;
+    }
+    if (keyLower.includes('bed') || keyLower.includes('mattress')) {
+      return FiHome;
+    }
+    if (keyLower.includes('cooking') || keyLower.includes('kitchen')) {
+      return FiCoffee;
+    }
+    if (keyLower.includes('laundry')) {
+      return MdOutlineLocalLaundryService;
+    }
     
+    // Default icon
     return FiHome;
-  };
+  }, []);
 
-  const formatAmenity = (text) => {
+  const formatAmenity = useCallback((text) => {
     if (!text) return "";
     
     const specialCases = {
@@ -353,9 +391,9 @@ export default function RoomDetailsUI({
       .replace(/\bAc\b/g, "AC")
       .replace(/\bTv\b/g, "TV")
       .replace(/\bWifi\b/g, "WiFi");
-  };
+  }, []);
 
-  const formatBHK = (type) => {
+  const formatBHK = useCallback((type) => {
     if (!type) return "Room";
     const typeMap = {
       "RK": "RK (Room + Kitchen)",
@@ -366,9 +404,9 @@ export default function RoomDetailsUI({
       "PG": "PG / Hostel"
     };
     return typeMap[type] || type;
-  };
+  }, []);
 
-  const formatFurnishing = (furnished) => {
+  const formatFurnishing = useCallback((furnished) => {
     if (!furnished) return "Not specified";
     const map = {
       "FURNISHED": "Fully Furnished",
@@ -376,9 +414,9 @@ export default function RoomDetailsUI({
       "UNFURNISHED": "Unfurnished",
     };
     return map[furnished] || furnished.replace(/_/g, " ");
-  };
+  }, []);
 
-  const formatGender = (gender) => {
+  const formatGender = useCallback((gender) => {
     if (!gender) return "Anyone";
     const map = {
       "BOYS": "Boys Only",
@@ -386,7 +424,7 @@ export default function RoomDetailsUI({
       "ANYONE": "Anyone"
     };
     return map[gender] || gender;
-  };
+  }, []);
 
   const handleLike = () => {
     const newLiked = !liked;
@@ -416,7 +454,7 @@ export default function RoomDetailsUI({
     setShowContactSheet(false);
   };
 
-  // Fullscreen Viewer Component
+  // Fullscreen Viewer Component - SIMPLIFIED
   const FullscreenView = () => {
     if (!isFullscreen) return null;
 
@@ -432,7 +470,6 @@ export default function RoomDetailsUI({
           <button
             onClick={() => setIsFullscreen(false)}
             className="absolute top-4 right-4 text-white p-3 hover:bg-white/10 rounded-full transition-all z-20"
-            aria-label="Close"
           >
             <FiX size={24} />
           </button>
@@ -483,7 +520,7 @@ export default function RoomDetailsUI({
     
     return (
       <div 
-        className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center p-4 touch-none"
+        className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center p-4"
         onClick={() => setShowContactSheet(false)}
       >
         <div 
@@ -494,7 +531,7 @@ export default function RoomDetailsUI({
             <h3 className="font-bold text-lg">Contact Options</h3>
             <button
               onClick={() => setShowContactSheet(false)}
-              className="p-2 hover:bg-gray-100 rounded-full active:bg-gray-200"
+              className="p-2 hover:bg-gray-100 rounded-full"
             >
               <FiX size={20} />
             </button>
@@ -505,7 +542,7 @@ export default function RoomDetailsUI({
               <>
                 <button
                   onClick={() => handleContact("whatsapp")}
-                  className="w-full bg-green-500 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3 active:bg-green-600 touch-manipulation"
+                  className="w-full bg-green-500 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3"
                 >
                   <FaWhatsapp size={24} />
                   <span>WhatsApp</span>
@@ -513,7 +550,7 @@ export default function RoomDetailsUI({
                 
                 <button
                   onClick={() => handleContact("phone")}
-                  className="w-full bg-blue-600 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3 active:bg-blue-700 touch-manipulation"
+                  className="w-full bg-blue-600 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3"
                 >
                   <IoCallOutline size={24} />
                   <span>Call Now</span>
@@ -521,7 +558,6 @@ export default function RoomDetailsUI({
                 
                 <div className="text-center text-gray-600 mt-4">
                   <p className="font-medium">Phone: {phone}</p>
-                  <p className="text-sm mt-2">Tap above to contact directly</p>
                 </div>
               </>
             ) : (
@@ -536,7 +572,7 @@ export default function RoomDetailsUI({
                 handleShare();
                 setShowContactSheet(false);
               }}
-              className="w-full border-2 border-gray-300 text-gray-700 font-semibold py-3 rounded-xl flex items-center justify-center gap-3 active:bg-gray-50 touch-manipulation"
+              className="w-full border-2 border-gray-300 text-gray-700 font-semibold py-3 rounded-xl flex items-center justify-center gap-3"
             >
               <FiShare2 size={20} />
               <span>Share Listing</span>
@@ -546,7 +582,7 @@ export default function RoomDetailsUI({
           <div className="p-4 border-t border-gray-200 text-center">
             <button
               onClick={() => setShowContactSheet(false)}
-              className="text-gray-500 hover:text-gray-700 font-medium py-2 px-4 active:text-gray-800"
+              className="text-gray-500 hover:text-gray-700 font-medium py-2 px-4"
             >
               Cancel
             </button>
@@ -556,36 +592,34 @@ export default function RoomDetailsUI({
     );
   };
 
-  // Image Gallery Component - FIXED FOR MOBILE
+  // Image Gallery Component - SIMPLIFIED
   const GalleryArea = () => {
     return (
-      <div className="relative">
+      <div className="relative md:col-span-2 lg:col-span-3">
         <div
           ref={touchAreaRef}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-          className="relative bg-black overflow-hidden"
+          className="relative bg-black overflow-hidden md:rounded-xl"
         >
-          {/* Responsive height - Reduced for mobile */}
-          <div className="relative w-full h-[45vh] sm:h-[50vh] md:h-[60vh] lg:h-[70vh]">
-            {/* Blur placeholder */}
-            <img
-              src={imageUrls[localIndex]}
-              className={`absolute inset-0 w-full h-full object-cover blur-xl transition-opacity duration-500 ${
-                imageLoaded[localIndex] ? "opacity-0" : "opacity-50"
-              }`}
-              alt=""
-            />
+          <div className="relative w-full h-[45vh] sm:h-[50vh] md:h-[400px] lg:h-[500px] xl:h-[600px]">
+            {/* Loading spinner */}
+            {!currentImageLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-10">
+                <FiLoader className="text-white animate-spin" size={32} />
+              </div>
+            )}
 
             {/* Main image */}
             <img
               src={imageUrls[localIndex]}
-              onLoad={() => handleImageLoad(localIndex)}
+              onLoad={handleImageLoad}
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                imageLoaded[localIndex] ? "opacity-100" : "opacity-0"
+                currentImageLoaded ? "opacity-100" : "opacity-0"
               }`}
               draggable="false"
               alt={`Room image ${localIndex + 1}`}
+              loading="lazy"
             />
 
             {/* Overlay gradient */}
@@ -595,7 +629,7 @@ export default function RoomDetailsUI({
             <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
               <button
                 onClick={() => router.back()}
-                className="p-3 bg-black/60 backdrop-blur-sm rounded-full text-white active:bg-black/80"
+                className="p-3 bg-black/60 backdrop-blur-sm rounded-full text-white"
               >
                 <FiChevronLeft size={20} />
               </button>
@@ -603,7 +637,7 @@ export default function RoomDetailsUI({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleLike}
-                  className="p-3 bg-black/60 backdrop-blur-sm rounded-full text-white active:bg-black/80"
+                  className="p-3 bg-black/60 backdrop-blur-sm rounded-full text-white"
                 >
                   <FiHeart
                     size={20}
@@ -612,7 +646,7 @@ export default function RoomDetailsUI({
                 </button>
                 <button
                   onClick={() => setShowContactSheet(true)}
-                  className="p-3 bg-black/60 backdrop-blur-sm rounded-full text-white active:bg-black/80"
+                  className="p-3 bg-black/60 backdrop-blur-sm rounded-full text-white"
                 >
                   <FiShare2 size={20} />
                 </button>
@@ -622,8 +656,7 @@ export default function RoomDetailsUI({
             {/* Zoom button */}
             <button
               onClick={() => setIsFullscreen(true)}
-              className="absolute bottom-20 right-4 p-3 bg-black/60 backdrop-blur-sm rounded-full text-white active:bg-black/80"
-              aria-label="Zoom in"
+              className="absolute bottom-20 right-4 p-3 bg-black/60 backdrop-blur-sm rounded-full text-white"
             >
               <FiMaximize2 size={20} />
             </button>
@@ -633,9 +666,9 @@ export default function RoomDetailsUI({
               {localIndex + 1} / {imageUrls.length}
             </div>
 
-            {/* Mobile navigation arrows */}
+            {/* Navigation arrows */}
             {imageUrls.length > 1 && (
-              <div className="absolute inset-0 flex items-center justify-between p-4 pointer-events-none">
+              <div className="absolute inset-0 flex items-center justify-between p-4">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -643,7 +676,7 @@ export default function RoomDetailsUI({
                     setLocalIndex(prev);
                     setCurrentImageIndex(prev);
                   }}
-                  className="pointer-events-auto p-3 bg-black/40 text-white rounded-full active:bg-black/60"
+                  className="p-3 bg-black/40 text-white rounded-full"
                 >
                   <FiChevronLeft size={20} />
                 </button>
@@ -654,7 +687,7 @@ export default function RoomDetailsUI({
                     setLocalIndex(next);
                     setCurrentImageIndex(next);
                   }}
-                  className="pointer-events-auto p-3 bg-black/40 text-white rounded-full active:bg-black/60"
+                  className="p-3 bg-black/40 text-white rounded-full"
                 >
                   <FiChevronRight size={20} />
                 </button>
@@ -678,7 +711,6 @@ export default function RoomDetailsUI({
                       ? "bg-white w-6"
                       : "bg-white/50"
                   }`}
-                  aria-label={`Go to image ${idx + 1}`}
                 />
               ))}
             </div>
@@ -688,12 +720,13 @@ export default function RoomDetailsUI({
     );
   };
 
-  // Mobile-friendly Action Bar
+  // Mobile Action Bar
   const MobileActionBar = () => {
+    if (!isMobile) return null;
+    
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] safe-bottom">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] md:hidden">
         <div className="flex items-center justify-between">
-          {/* Price info */}
           <div className="flex-1 min-w-0 mr-4">
             <p className="text-sm font-medium text-gray-600">Monthly Rent</p>
             <div className="flex items-baseline gap-1">
@@ -711,18 +744,16 @@ export default function RoomDetailsUI({
             )}
           </div>
           
-          {/* Action buttons */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowContactSheet(true)}
-              className="p-3 rounded-xl bg-gray-100 active:bg-gray-200 touch-manipulation flex-shrink-0"
-              aria-label="More options"
+              className="p-3 rounded-xl bg-gray-100"
             >
               <BsThreeDots size={20} className="text-gray-600" />
             </button>
             <button
               onClick={() => handleContact("whatsapp")}
-              className="bg-green-500 text-white font-semibold py-3 px-4 rounded-xl active:bg-green-600 touch-manipulation min-w-[100px] flex-shrink-0 whitespace-nowrap"
+              className="bg-green-500 text-white font-semibold py-3 px-4 rounded-xl min-w-[100px]"
             >
               Contact
             </button>
@@ -732,12 +763,80 @@ export default function RoomDetailsUI({
     );
   };
 
-  // Details Panel Component
+  // Desktop Sidebar
+  const DesktopSidebar = () => {
+    if (isMobile) return null;
+    
+    return (
+      <div className="md:col-span-1 lg:col-span-2">
+        <div className="sticky top-24 bg-white rounded-xl shadow-lg border border-gray-200 p-6 space-y-6">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Pricing Details</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Monthly Rent</span>
+                <span className="text-2xl font-bold text-gray-900">
+                  ₹{room.rent?.toLocaleString("en-IN") || "0"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Security Deposit</span>
+                <span className="text-lg font-semibold text-gray-900">
+                  ₹{room.deposit?.toLocaleString("en-IN") || "0"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Contact Owner</h3>
+            <div className="space-y-3">
+              <button
+                onClick={() => handleContact("whatsapp")}
+                className="w-full bg-green-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2"
+              >
+                <FaWhatsapp size={20} />
+                <span>WhatsApp</span>
+              </button>
+              
+              <button
+                onClick={() => handleContact("phone")}
+                className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2"
+              >
+                <IoCallOutline size={20} />
+                <span>Call Now</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Quick Info</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500">Property Type</p>
+                <p className="font-semibold text-gray-900">{formatBHK(room.type)}</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500">Furnishing</p>
+                <p className="font-semibold text-gray-900">{formatFurnishing(room.furnished)}</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500">Available For</p>
+                <p className="font-semibold text-gray-900">{formatGender(room.gender)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Details Panel Component - FIXED SCROLLING
   const DetailsPanel = () => {
     const amenitiesList = room.amenities || [];
     const visibleAmenities = showAllAmenities
       ? amenitiesList
-      : amenitiesList.slice(0, 8); // Show 8 amenities initially
+      : amenitiesList.slice(0, 8);
 
     const formattedAddress = [
       address.area,
@@ -745,217 +844,196 @@ export default function RoomDetailsUI({
       address.state
     ].filter(Boolean).join(", ");
 
+    const description = room.description && room.description.trim() !== "" 
+      ? room.description 
+      : "No detailed description provided. Contact for more details.";
+    
+    const needsExpansion = description.length > 300;
+
     return (
-      <div className="px-4 pb-24" ref={detailsRef}>
-        {/* Main details card - No negative margin */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          {/* Header */}
-          <div className="p-4">
-            {/* Property type badges */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+      <div className="md:col-span-2 lg:col-span-3">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6">
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
                 {formatBHK(room.type)}
               </span>
               
               {room.furnished && (
-                <span className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold">
+                <span className="px-4 py-2 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold">
                   {formatFurnishing(room.furnished)}
                 </span>
               )}
               
               {room.brokerageRequired !== undefined && !room.brokerageRequired && (
-                <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+                <span className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
                   No Brokerage
                 </span>
               )}
             </div>
 
-            {/* Title */}
-            <h1 className="text-lg font-bold text-gray-900 mb-2 leading-tight">
+            <h1 className="text-2xl font-bold text-gray-900 mb-3 leading-tight">
               {room.title || `${formatBHK(room.type)} in ${address.area || address.city || "Pune"}`}
             </h1>
 
-            {/* Address - Fixed for better mobile display */}
-            <div className="flex items-start gap-2 text-gray-600 mb-4">
-              <FiMapPin className="text-blue-500 mt-0.5 flex-shrink-0" size={16} />
+            <div className="flex items-start gap-3 text-gray-600 mb-6">
+              <FiMapPin className="text-blue-500 mt-1 flex-shrink-0" size={18} />
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-gray-900 text-sm truncate">{formattedAddress || "Location"}</p>
+                <p className="font-medium text-gray-900 text-lg mb-1">{formattedAddress || "Location"}</p>
                 {address.line1 && (
-                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{address.line1}</p>
+                  <p className="text-gray-500 text-sm">{address.line1}</p>
                 )}
               </div>
             </div>
 
-            {/* Quick stats - Mobile optimized */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <FiUsers className="text-blue-600" size={16} />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">For</p>
-                  <p className="font-semibold text-gray-900 text-sm">
-                    {formatGender(room.gender)}
-                  </p>
-                </div>
+            {/* Description with FIXED scrolling */}
+            <div className="mb-6">
+              <h3 className="font-semibold text-gray-900 text-lg mb-3 flex items-center gap-2">
+                <FiInfo className="text-gray-400" size={18} />
+                Description
+              </h3>
+              <div 
+                className="description-container"
+                style={{
+                  maxHeight: isMobile ? '120px' : '200px',
+                  overflowY: 'auto',
+                  paddingRight: '1rem'
+                }}
+              >
+                <p className="text-gray-600 leading-relaxed text-base whitespace-pre-line">
+                  {description}
+                </p>
               </div>
-
-              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <LuArmchair className="text-blue-600" size={16} />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Furnishing</p>
-                  <p className="font-semibold text-gray-900 text-sm">
-                    {formatFurnishing(room.furnished)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="p-4 border-t border-gray-100">
-            <div className="flex items-center gap-2 mb-3">
-              <FiInfo className="text-gray-400" size={16} />
-              <h3 className="font-semibold text-gray-900 text-sm">Description</h3>
-            </div>
-            <div className="max-h-[120px] overflow-y-auto">
-              <p className="text-gray-600 leading-relaxed text-sm whitespace-pre-line">
-                {room.description && room.description.trim() !== "" 
-                  ? room.description 
-                  : "No detailed description provided. Contact for more details."}
-              </p>
-            </div>
-          </div>
-
-          {/* Amenities */}
-          {amenitiesList.length > 0 && (
-            <div className="p-4 border-t border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-gray-900 text-sm">Amenities & Rules</h3>
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                  {amenitiesList.length}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                {visibleAmenities.map((amenity) => {
-                  const Icon = getAmenityIcon(amenity);
-                  const isRule = amenity.toLowerCase().includes('no ');
-                  
-                  return (
-                    <div
-                      key={amenity}
-                      className={`flex items-center gap-2 p-2.5 rounded-lg ${
-                        isRule
-                          ? "bg-red-50 border border-red-100"
-                          : "bg-gray-50 border border-gray-100"
-                      }`}
-                    >
-                      <Icon 
-                        className={isRule ? "text-red-600" : "text-blue-600"} 
-                        size={14} 
-                      />
-                      <span className={`text-xs font-medium ${
-                        isRule ? "text-red-700" : "text-gray-700"
-                      }`}>
-                        {formatAmenity(amenity)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {amenitiesList.length > 8 && (
+              
+              {needsExpansion && (
                 <button
-                  onClick={() => setShowAllAmenities(!showAllAmenities)}
-                  className="w-full mt-3 text-blue-600 hover:text-blue-700 font-medium text-xs flex items-center justify-center gap-1 py-2 active:text-blue-800"
+                  onClick={() => {
+                    const container = document.querySelector('.description-container');
+                    if (container) {
+                      container.style.maxHeight = container.style.maxHeight === 'none' 
+                        ? (isMobile ? '120px' : '200px') 
+                        : 'none';
+                    }
+                  }}
+                  className="mt-3 text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-1"
                 >
-                  {showAllAmenities ? "Show less" : "Show all amenities"}
-                  <FiExternalLink size={10} />
+                  Read more
+                  <FiExternalLink size={12} />
                 </button>
               )}
             </div>
+
+            {/* Amenities - FIXED ICON RENDERING */}
+            {amenitiesList.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900 text-lg">Amenities & Rules</h3>
+                  <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                    {amenitiesList.length} amenities
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {visibleAmenities.map((amenity) => {
+                    const IconComponent = getAmenityIcon(amenity);
+                    const isRule = amenity.toLowerCase().includes('no ');
+                    
+                    return (
+                      <div
+                        key={amenity}
+                        className={`flex items-center gap-3 p-3 rounded-lg ${
+                          isRule ? "bg-red-50 border border-red-100" : "bg-gray-50 border border-gray-100"
+                        }`}
+                      >
+                        {IconComponent && React.createElement(IconComponent, {
+                          className: isRule ? "text-red-600" : "text-blue-600",
+                          size: 16
+                        })}
+                        <span className={`text-sm font-medium ${
+                          isRule ? "text-red-700" : "text-gray-700"
+                        }`}>
+                          {formatAmenity(amenity)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {amenitiesList.length > 8 && (
+                  <button
+                    onClick={() => setShowAllAmenities(!showAllAmenities)}
+                    className="w-full mt-4 text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center justify-center gap-2 py-2"
+                  >
+                    {showAllAmenities ? "Show less amenities" : `Show all ${amenitiesList.length} amenities`}
+                    <FiExternalLink size={12} />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Contact Information - Mobile only */}
+            {isMobile && (
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="font-semibold text-gray-900 text-lg mb-4">Contact Info</h3>
+                <div className="space-y-3">
+                  {room.phone && (
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <IoCallOutline className="text-green-600" size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Phone Number</p>
+                          <p className="font-medium text-gray-900">{room.phone}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleContact("phone")}
+                        className="text-blue-600 font-medium text-sm px-3 py-1.5"
+                      >
+                        Call
+                      </button>
+                    </div>
+                  )}
+                  
+                  {room.whatsapp && (
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <FaWhatsapp className="text-green-600" size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">WhatsApp</p>
+                          <p className="font-medium text-gray-900">{room.whatsapp}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleContact("whatsapp")}
+                        className="text-green-600 font-medium text-sm px-3 py-1.5"
+                      >
+                        Message
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer - Mobile only */}
+          {isMobile && (
+            <div className="p-4 border-t border-gray-100 bg-gray-50">
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>ID: {room.id || "N/A"}</span>
+                <span>Posted: {room.createdAt 
+                  ? new Date(room.createdAt).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short'
+                    })
+                  : "Recently"}</span>
+              </div>
+            </div>
           )}
-
-          {/* Contact Information */}
-          <div className="p-4 border-t border-gray-100">
-            <h3 className="font-semibold text-gray-900 text-sm mb-3">Contact Info</h3>
-            <div className="space-y-2">
-              {room.phone && (
-                <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-green-100 rounded-lg">
-                      <IoCallOutline className="text-green-600" size={14} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-gray-500">Phone Number</p>
-                      <p className="font-medium text-gray-900 text-sm truncate">{room.phone}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleContact("phone")}
-                    className="text-blue-600 font-medium text-xs px-2 py-1.5 active:text-blue-800 whitespace-nowrap"
-                  >
-                    Call
-                  </button>
-                </div>
-              )}
-              
-              {room.whatsapp && (
-                <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-green-100 rounded-lg">
-                      <FaWhatsapp className="text-green-600" size={14} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-gray-500">WhatsApp</p>
-                      <p className="font-medium text-gray-900 text-sm truncate">{room.whatsapp}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleContact("whatsapp")}
-                    className="text-green-600 font-medium text-xs px-2 py-1.5 active:text-green-800 whitespace-nowrap"
-                  >
-                    Message
-                  </button>
-                </div>
-              )}
-            </div>
-            
-            {/* Contact buttons */}
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button
-                onClick={() => handleContact("whatsapp")}
-                className="bg-green-500 text-white font-semibold py-2.5 px-2 rounded-xl active:bg-green-700 flex items-center justify-center gap-1.5 touch-manipulation"
-              >
-                <FaWhatsapp size={16} />
-                <span className="text-xs">WhatsApp</span>
-              </button>
-              
-              <button
-                onClick={() => handleContact("phone")}
-                className="bg-blue-600 text-white font-semibold py-2.5 px-2 rounded-xl active:bg-blue-800 flex items-center justify-center gap-1.5 touch-manipulation"
-              >
-                <MdCall size={16} />
-                <span className="text-xs">Call Now</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Additional info */}
-          <div className="p-3 border-t border-gray-100 bg-gray-50">
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>ID: {room.id || "N/A"}</span>
-              <span>Posted: {room.createdAt 
-                ? new Date(room.createdAt).toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short'
-                  })
-                : "Recently"}</span>
-            </div>
-          </div>
         </div>
       </div>
     );
@@ -967,11 +1045,11 @@ export default function RoomDetailsUI({
       <ContactSheet />
       
       <div className="min-h-screen bg-gray-50">
-        {/* Mobile header - Simplified */}
-        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between safe-top">
+        {/* Mobile Header */}
+        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between md:hidden">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-full active:bg-gray-100 touch-manipulation"
+            className="p-2 rounded-full"
           >
             <FiChevronLeft size={18} />
           </button>
@@ -980,7 +1058,7 @@ export default function RoomDetailsUI({
           </h2>
           <button
             onClick={handleLike}
-            className="p-2 rounded-full active:bg-gray-100 touch-manipulation"
+            className="p-2 rounded-full"
           >
             <FiHeart
               size={18}
@@ -989,50 +1067,74 @@ export default function RoomDetailsUI({
           </button>
         </div>
 
-        <GalleryArea />
-        <DetailsPanel />
+        {/* Desktop Header */}
+        <div className="hidden md:block bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => router.back()}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              >
+                <FiChevronLeft size={20} />
+                <span>Back to Listings</span>
+              </button>
+              
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleLike}
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+                >
+                  <FiHeart
+                    size={20}
+                    className={liked ? "fill-red-500 text-red-500" : ""}
+                  />
+                  <span>{liked ? "Saved" : "Save"}</span>
+                </button>
+                
+                <button
+                  onClick={() => setShowContactSheet(true)}
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+                >
+                  <FiShare2 size={18} />
+                  <span>Share</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            <GalleryArea />
+            <DetailsPanel />
+            <DesktopSidebar />
+          </div>
+        </div>
+
         <MobileActionBar />
       </div>
       
-      {/* Mobile optimization styles */}
+      {/* Clean, simple styles */}
       <style jsx global>{`
-        /* Safe areas for mobile devices */
-        .safe-top {
-          padding-top: env(safe-area-inset-top, 0);
+        /* Basic scrollbar styling */
+        .description-container {
+          scrollbar-width: thin;
+          scrollbar-color: #d1d5db #f3f4f6;
         }
         
-        .safe-bottom {
-          padding-bottom: env(safe-area-inset-bottom, 0);
+        .description-container::-webkit-scrollbar {
+          width: 6px;
         }
         
-        .pb-safe {
-          padding-bottom: env(safe-area-inset-bottom, 0);
+        .description-container::-webkit-scrollbar-track {
+          background: #f3f4f6;
+          border-radius: 3px;
         }
         
-        /* Hide scrollbar for horizontal scroll */
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        
-        /* Better touch handling */
-        .touch-manipulation {
-          touch-action: manipulation;
-        }
-        
-        .touch-pan-x {
-          touch-action: pan-x;
-        }
-        
-        /* Better text truncation */
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
+        .description-container::-webkit-scrollbar-thumb {
+          background-color: #d1d5db;
+          border-radius: 3px;
         }
         
         /* Prevent blue highlight on mobile */
@@ -1045,32 +1147,17 @@ export default function RoomDetailsUI({
           scroll-behavior: smooth;
         }
         
-        /* Mobile optimizations */
-        @media (max-width: 640px) {
-          input, select, textarea, button {
-            font-size: 16px;
-          }
-          
-          /* Ensure content doesn't overflow */
-          body {
-            overflow-x: hidden;
-          }
-          
-          /* Better scrolling for description */
-          .overflow-y-auto {
-            scrollbar-width: none;
-          }
-          .overflow-y-auto::-webkit-scrollbar {
-            display: none;
-          }
+        /* Image loading animation */
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
         
-        /* Prevent pull-to-refresh on mobile */
-        body {
-          overscroll-behavior-y: contain;
+        .animate-spin {
+          animation: spin 1s linear infinite;
         }
         
-        /* Improve font rendering on mobile */
+        /* Improve font rendering */
         body {
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
@@ -1079,4 +1166,3 @@ export default function RoomDetailsUI({
     </>
   );
 }
-

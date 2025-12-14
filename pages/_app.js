@@ -12,8 +12,8 @@ const inter = Inter({
 export default function App({ Component, pageProps }) {
   return (
     <AuthProvider>
-      {/* Global SEO only for non-dynamic pages */}
-      {!pageProps.disableDefaultSEO && <SEO />}
+      {/* Global SEO ONLY if page does NOT disable it */}
+      {Component.disableDefaultSEO !== true && <SEO />}
 
       <div className={inter.className}>
         <Component {...pageProps} />

@@ -177,18 +177,37 @@ export default function RoomDetailsUI({
   
   // Transform image objects to URLs array - SIMPLIFIED
 
+// In RoomDetailsUI component, update the imageUrls useMemo:
+
 const imageUrls = useMemo(() => {
   if (!roomImages || roomImages.length === 0) {
     return ["/no-image.jpg"];
   }
 
-  return roomImages
-    .map(img =>
-      typeof img === "string"
-        ? ensureAbsoluteUrl(img)
-        : ensureAbsoluteUrl(img.url)
-    )
-    .filter(Boolean);
+  const urls = roomImages.map(img => {
+    if (!img) return null;
+    
+    if (typeof img === "string") {
+      // It's already a string URL
+      if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('/')) {
+        return img;
+      }
+      // It's a Cloudinary URL or other format
+      return ensureAbsoluteUrl(img);
+    }
+    
+    // It's an object with url property
+    if (img.url) {
+      if (img.url.startsWith('http://') || img.url.startsWith('https://')) {
+        return img.url;
+      }
+      return ensureAbsoluteUrl(img.url);
+    }
+    
+    return null;
+  }).filter(Boolean); // Remove null values
+
+  return urls.length > 0 ? urls : ["/no-image.jpg"];
 }, [roomImages]);
 
 
@@ -689,7 +708,12 @@ const imageUrls = useMemo(() => {
 const GalleryArea = () => {
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [imageErrors, setImageErrors] = useState({});
+  const handleImageError = (index) => {
+  setImageErrors(prev => ({ ...prev, [index]: true }));
+};
 
+  
   // Swipe threshold
   const minSwipeDistance = 50;
 

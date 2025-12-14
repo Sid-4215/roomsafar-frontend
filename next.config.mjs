@@ -1,3 +1,4 @@
+// next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -25,7 +26,7 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
-  async headers() {
+    async headers() {
     return [
       {
         source: "/api/og/:path*",
@@ -33,10 +34,6 @@ const nextConfig = {
           {
             key: "Cache-Control",
             value: "public, max-age=86400, s-maxage=86400",
-          },
-          {
-            key: "Content-Type",
-            value: "image/png",
           },
           {
             key: "Access-Control-Allow-Origin",
@@ -49,7 +46,7 @@ const nextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=3600, s-maxage=7200",
+            value: "no-store, must-revalidate",
           },
         ],
       },

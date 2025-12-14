@@ -165,7 +165,8 @@ export async function getServerSideProps({ params, req }) {
     // Get the site URL dynamically
     const protocol = req.headers['x-forwarded-proto'] || 'http';
     const host = req.headers.host;
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `${protocol}://${host}`;
+    const siteUrl  = process.env.NEXT_PUBLIC_SITE_URL || `https://${host}`;
+
     
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE}/api/rooms/${params.id}`,
@@ -176,27 +177,34 @@ export async function getServerSideProps({ params, req }) {
 
     let room = await res.json();
     
-    // Convert ALL image URLs to absolute during SSR
+    // Process images to ensure absolute URLs
     if (room.images && Array.isArray(room.images)) {
       room.images = room.images.map(img => {
-        if (!img.url) return img;
+        if (!img || !img.url) return img;
         
         // If URL is already absolute, keep it
-        if (img.url.startsWith('http')) {
+        if (img.url.startsWith('http://') || img.url.startsWith('https://')) {
           return img;
         }
         
         // If it's a relative URL, make it absolute
         let cleanUrl = img.url;
-        if (!cleanUrl.startsWith('/')) {
-          cleanUrl = '/' + cleanUrl;
+        
+        // Remove leading double slashes if any
+        if (cleanUrl.startsWith("//")) {
+          cleanUrl = cleanUrl.substring(1);
+        }
+        
+        // Ensure it starts with a slash
+        if (!cleanUrl.startsWith("/")) {
+          cleanUrl = "/" + cleanUrl;
         }
         
         return {
           ...img,
           url: `${siteUrl}${cleanUrl}`
         };
-      });
+      }).filter(img => img && img.url); // Filter out invalid images
     }
 
     return { 

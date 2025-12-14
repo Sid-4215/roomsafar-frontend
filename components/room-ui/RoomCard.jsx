@@ -2,7 +2,7 @@
 import { useRouter } from "next/router";
 import Image from "next/image";
 import { memo, useState } from "react";
-
+import { getPrimaryImage, ensureAbsoluteUrl } from "@/utils/imageUtils";
 import {
   FiHeart,
   FiMapPin,
@@ -16,7 +16,8 @@ export default memo(function RoomCard({ room }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
 
-  const img = room?.images?.[0]?.url || "/no-image.jpg";
+  const primaryImage = getPrimaryImage(room.images);
+  const img = ensureAbsoluteUrl(primaryImage?.url) || "/no-image.jpg";
   const area = room.address?.area || "Area";
   const city = room.address?.city || "City";
 

@@ -49,15 +49,12 @@ export default function RoomDetailsPage({ room, siteUrl }) {
       : "Find verified rooms and flats on Roomsafar with no brokerage.";
 
   const url = `${siteUrl || 'https://roomsafar.com'}/room/${room.id}`;
+  const shareUrl = `${url}?share=wa`;
+
   
   // Choose the best image for social media - FIXED
-  let seoImage;
-  if (images.length > 0 && images[0]) {
-    seoImage = images[0];
-  } else {
-    // Use dynamic OG image as fallback
-    seoImage = `https://roomsafar.com/api/og/room/${room.id}?title=${encodeURIComponent(seoTitle)}&rent=${room.rent}&area=${encodeURIComponent(room.address?.area || 'Pune')}`;
-  }
+  const seoImage = `https://roomsafar.com/api/og/room/${room.id}`;
+
 
   /* -------- Share -------- */
   const handleShare = async () => {
@@ -66,7 +63,7 @@ export default function RoomDetailsPage({ room, siteUrl }) {
         await navigator.share({
           title: seoTitle,
           text: seoDesc,
-          url,
+          url: shareUrl,
         });
       } else {
         await navigator.clipboard.writeText(url);

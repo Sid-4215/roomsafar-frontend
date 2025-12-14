@@ -1,4 +1,5 @@
 "use client";
+import { ensureAbsoluteUrl } from "@/utils/imageUtils";
 import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import {
   FiMapPin,
@@ -175,19 +176,21 @@ export default function RoomDetailsUI({
   const roomImages = images.length > 0 ? images : room?.images || [];
   
   // Transform image objects to URLs array - SIMPLIFIED
-  const imageUrls = useMemo(() => {
-    if (!roomImages || roomImages.length === 0) return ["/no-image.jpg"];
-    
-    if (typeof roomImages[0] === 'string') {
-      return roomImages;
-    }
-    
-    if (roomImages[0]?.url) {
-      return roomImages.map(img => img.url);
-    }
-    
+
+const imageUrls = useMemo(() => {
+  if (!roomImages || roomImages.length === 0) {
     return ["/no-image.jpg"];
-  }, [roomImages]);
+  }
+
+  return roomImages
+    .map(img =>
+      typeof img === "string"
+        ? ensureAbsoluteUrl(img)
+        : ensureAbsoluteUrl(img.url)
+    )
+    .filter(Boolean);
+}, [roomImages]);
+
 
   // States - SIMPLIFIED
   const [localIndex, setLocalIndex] = useState(currentImageIndex || 0);

@@ -204,76 +204,111 @@ export default function PostRoom() {
   }, []);
 
   // Upload images to Cloudinary
-  const uploadImages = useCallback(async () => {
-    const CLOUD = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-    const PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+  // Update the uploadImages function in PostRoom.js
 
-    if (!CLOUD || !PRESET) {
-      toast.error("Cloudinary configuration missing");
-      return false;
-    }
+const uploadImages = useCallback(async () => {
+  const CLOUD = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
-    const pending = selectedFiles
-      .map((f, i) => ({ ...f, index: i }))
-      .filter((f) => !f.uploadedUrl);
+  if (!CLOUD || !PRESET) {
+    toast.error("Upload configuration missing. Please contact support.");
+    return false;
+  }
 
-    if (!pending.length) {
-      toast.success("All photos uploaded");
-      return true;
-    }
+  const pending = selectedFiles
+    .map((f, i) => ({ ...f, index: i }))
+    .filter((f) => !f.uploadedUrl);
 
-    setUploading(true);
+  if (!pending.length) {
+    toast.success("All photos uploaded");
+    return true;
+  }
 
-    const uploadSingle = async (fileObj, attempt = 1) => {
-      try {
-        const result = await uploadService.uploadToCloudinary(
-          fileObj.file,
-          CLOUD,
-          PRESET,
-          (pct) => setUploadProgress(p => ({ ...p, [fileObj.index]: pct }))
-        );
+  setUploading(true);
 
+  const uploadSingle = async (fileObj, attempt = 1) => {
+    try {
+      // Create FormData
+      const formData = new FormData();
+      formData.append('file', fileObj.file);
+      formData.append('upload_preset', PRESET);
+      formData.append('folder', 'roomsafar/rooms');
+      formData.append('timestamp', Date.now().toString());
+      
+      // Upload directly to Cloudinary
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUD}/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      setSelectedFiles(prev => {
+        const updated = [...prev];
+        updated[fileObj.index] = {
+          ...updated[fileObj.index],
+          uploadedUrl: result.secure_url,
+          publicId: result.public_id,
+          progress: 100,
+          error: null,
+        };
+        return updated;
+      });
+
+      return { success: true, url: result.secure_url };
+    } catch (err) {
+      console.error(`Upload error for file ${fileObj.index}:`, err);
+      
+      if (attempt < MAX_UPLOAD_RETRIES) {
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        return uploadSingle(fileObj, attempt + 1);
+      } else {
         setSelectedFiles(prev => {
           const updated = [...prev];
-          updated[fileObj.index] = {
-            ...updated[fileObj.index],
-            uploadedUrl: result.url,
-            progress: 100,
-            error: null,
-          };
+          updated[fileObj.index].error = "Upload failed after retries";
           return updated;
         });
-
-        return { success: true, url: result.url };
-      } catch (err) {
-        if (attempt < MAX_UPLOAD_RETRIES) {
-          await uploadSingle(fileObj, attempt + 1);
-        } else {
-          setSelectedFiles(prev => {
-            const updated = [...prev];
-            updated[fileObj.index].error = "Upload failed";
-            return updated;
-          });
-          return { success: false, error: err.message };
-        }
+        return { success: false, error: err.message };
       }
-    };
-
-    try {
-      for (let i = 0; i < pending.length; i += MAX_PARALLEL_UPLOADS) {
-        const chunk = pending.slice(i, i + MAX_PARALLEL_UPLOADS);
-        await Promise.all(chunk.map(uploadSingle));
-      }
-
-      toast.success("Upload complete");
-      return true;
-    } catch (err) {
-      toast.error("Some uploads failed");
-      return false;
-    } finally {
-      setUploading(false);
     }
-  }, [selectedFiles]);
+  };
+
+  try {
+    // Upload in parallel (max 3 at a time)
+    const results = [];
+    const batchSize = MAX_PARALLEL_UPLOADS;
+    
+    for (let i = 0; i < pending.length; i += batchSize) {
+      const batch = pending.slice(i, i + batchSize);
+      const batchResults = await Promise.allSettled(batch.map(uploadSingle));
+      results.push(...batchResults);
+    }
+
+    const failedUploads = results.filter(r => r.status === 'rejected' || r.value?.success === false);
+    
+    if (failedUploads.length > 0) {
+      toast.error(`${failedUploads.length} images failed to upload`);
+      return false;
+    }
+
+    toast.success("All images uploaded successfully!");
+    return true;
+  } catch (err) {
+    console.error("Batch upload error:", err);
+    toast.error("Upload failed. Please try again.");
+    return false;
+  } finally {
+    setUploading(false);
+  }
+}, [selectedFiles]);
 
   // Validate form
   const validateForm = useCallback(() => {

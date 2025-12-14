@@ -42,26 +42,29 @@ export default function RoomDetailsPage({ room }) {
     room.description?.substring(0, 160) ||
     "Find verified rooms and flats on Roomsafar with no brokerage.";
 
-  const seoImage = images[0] || "https://roomsafar.com/og-image.png";
+  const seoImage = `https://roomsafar.com/api/og/room/${room.id}?v=1`;
   const url = `https://roomsafar.com/room/${room.id}`;
 
   /* -------- Share -------- */
   const handleShare = async () => {
+    const shareUrl = `${url}?share=wa`;
+
     try {
       if (navigator.share) {
         await navigator.share({
           title: seoTitle,
           text: seoDesc,
-          url,
+          url: shareUrl,
         });
       } else {
-        await navigator.clipboard.writeText(url);
-        toast.success("Link copied to clipboard!");
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success("Link copied!");
       }
     } catch {
       toast.error("Unable to share");
     }
   };
+
 
   /* -------- Schema -------- */
   const jsonLd = {

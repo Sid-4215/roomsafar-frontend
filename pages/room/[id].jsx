@@ -1,3 +1,4 @@
+// RoomDetailsPage.js - UPDATED VERSION
 import Head from "next/head";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
@@ -11,8 +12,17 @@ const formatBHK = (type) => {
   return match ? `${match[1]} BHK` : type;
 };
 
+// Helper to ensure absolute URLs
+const ensureAbsoluteUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  // Remove double slashes if any
+  const cleanUrl = url.startsWith("//") ? url.substring(1) : url;
+  return `https://roomsafar.com${cleanUrl.startsWith('/') ? cleanUrl : '/' + cleanUrl}`;
+};
+
 /* -------------------- Page -------------------- */
-export default function RoomDetailsPage({ room }) {
+export default function RoomDetailsPage({ room, siteUrl }) {
   if (!room) {
     return (
       <>
@@ -26,12 +36,7 @@ export default function RoomDetailsPage({ room }) {
   }
 
   /* -------- Images (ABSOLUTE URLs ONLY) -------- */
-  const images =
-    room.images?.map((img) =>
-      img.url.startsWith("http")
-        ? img.url
-        : `https://roomsafar.com${img.url}`
-    ) || [];
+  const images = room.images?.map(img => ensureAbsoluteUrl(img.url)).filter(Boolean) || [];
 
   /* -------- SEO -------- */
   const seoTitle = `${formatBHK(room.type)} in ${
@@ -39,32 +44,38 @@ export default function RoomDetailsPage({ room }) {
   } — ₹${room.rent} | Roomsafar`;
 
   const seoDesc =
-    room.description?.substring(0, 160) ||
-    "Find verified rooms and flats on Roomsafar with no brokerage.";
+    (room.description && room.description.length > 0) 
+      ? `${room.description.substring(0, 155)}...` 
+      : "Find verified rooms and flats on Roomsafar with no brokerage.";
 
-  const seoImage = `https://roomsafar.com/api/og/room/${room.id}?v=1`;
-  const url = `https://roomsafar.com/room/${room.id}`;
+  const url = `${siteUrl || 'https://roomsafar.com'}/room/${room.id}`;
+  
+  // Choose the best image for social media - FIXED
+  let seoImage;
+  if (images.length > 0 && images[0]) {
+    seoImage = images[0];
+  } else {
+    // Use dynamic OG image as fallback
+    seoImage = `https://roomsafar.com/api/og/room/${room.id}?title=${encodeURIComponent(seoTitle)}&rent=${room.rent}&area=${encodeURIComponent(room.address?.area || 'Pune')}`;
+  }
 
   /* -------- Share -------- */
   const handleShare = async () => {
-    const shareUrl = `${url}?share=wa`;
-
     try {
       if (navigator.share) {
         await navigator.share({
           title: seoTitle,
           text: seoDesc,
-          url: shareUrl,
+          url,
         });
       } else {
-        await navigator.clipboard.writeText(shareUrl);
-        toast.success("Link copied!");
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard!");
       }
     } catch {
       toast.error("Unable to share");
     }
   };
-
 
   /* -------- Schema -------- */
   const jsonLd = {
@@ -97,21 +108,34 @@ export default function RoomDetailsPage({ room }) {
         <meta name="description" content={seoDesc} />
         <link rel="canonical" href={url} />
 
-        {/* Open Graph */}
+        {/* Open Graph - Essential for Facebook, LinkedIn */}
         <meta property="og:type" content="website" />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDesc} />
         <meta property="og:image" content={seoImage} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content={seoTitle} />
         <meta property="og:url" content={url} />
         <meta property="og:site_name" content="Roomsafar" />
+        <meta property="og:locale" content="en_IN" />
 
-        {/* Twitter */}
+        {/* Twitter - Essential for Twitter Cards */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDesc} />
         <meta name="twitter:image" content={seoImage} />
+        <meta name="twitter:image:alt" content={seoTitle} />
+        <meta name="twitter:site" content="@roomsafar" />
+
+        {/* Additional important meta tags */}
+        <meta name="robots" content="index, follow" />
+        <meta property="article:published_time" content={room.createdAt || new Date().toISOString()} />
+        <meta property="article:author" content="Roomsafar" />
+        
+        {/* Price meta tags for better sharing */}
+        <meta property="product:price:amount" content={room.rent} />
+        <meta property="product:price:currency" content="INR" />
 
         {/* Schema */}
         <script
@@ -139,8 +163,13 @@ export default function RoomDetailsPage({ room }) {
 }
 
 /* -------------------- SSR (IMPORTANT) -------------------- */
-export async function getServerSideProps({ params }) {
+export async function getServerSideProps({ params, req }) {
   try {
+    // Get the site URL dynamically
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `${protocol}://${host}`;
+    
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE}/api/rooms/${params.id}`,
       { headers: { Accept: "application/json" } }
@@ -148,12 +177,41 @@ export async function getServerSideProps({ params }) {
 
     if (!res.ok) return { notFound: true };
 
-    const room = await res.json();
-    return { props: { room } };
-  } catch {
+    let room = await res.json();
+    
+    // Convert ALL image URLs to absolute during SSR
+    if (room.images && Array.isArray(room.images)) {
+      room.images = room.images.map(img => {
+        if (!img.url) return img;
+        
+        // If URL is already absolute, keep it
+        if (img.url.startsWith('http')) {
+          return img;
+        }
+        
+        // If it's a relative URL, make it absolute
+        let cleanUrl = img.url;
+        if (!cleanUrl.startsWith('/')) {
+          cleanUrl = '/' + cleanUrl;
+        }
+        
+        return {
+          ...img,
+          url: `${siteUrl}${cleanUrl}`
+        };
+      });
+    }
+
+    return { 
+      props: { 
+        room,
+        siteUrl
+      } 
+    };
+  } catch (error) {
+    console.error('Error in getServerSideProps:', error);
     return { notFound: true };
   }
 }
 
 RoomDetailsPage.disableDefaultSEO = true;
-// This page uses custom SEO tags based on room data

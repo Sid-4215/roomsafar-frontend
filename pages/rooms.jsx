@@ -147,6 +147,17 @@ export default function Rooms({ initialRooms, initialTotal }) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [saveStateToStorage]);
 
+  useEffect(() => {
+  if (!router.isReady) return;
+
+  const { area } = router.query;
+
+  if (area) {
+    fetchRooms({ area }, true);
+  }
+}, [router.isReady]);
+
+
   /* ---------------- SEO ---------------- */
   const areaSEO = useMemo(
     () => (filters.area ? ` in ${filters.area}` : ""),
